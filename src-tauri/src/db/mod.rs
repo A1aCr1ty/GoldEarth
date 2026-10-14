@@ -197,6 +197,9 @@ impl Storage {
         if let Some(v) = patch.font_scale {
             next.font_scale = v;
         }
+        if let Some(v) = patch.birth_date {
+            next.birth_date = v;
+        }
         // 外观字段按白名单收紧后再落盘，保证文件里永远是合法值
         let next = next.normalized();
         *self.settings.lock() = next.clone();

@@ -186,6 +186,9 @@ pub struct AppSettings {
     pub font: String,
     /// 字号倍数：基准字号 16px 乘它一次，再由窗口缩放乘一次
     pub font_scale: f64,
+    /// 生日（YYYY-MM-DD），用来推星座运势。留空表示没填，
+    /// 首页运势那栏会改成轮播十二星座。
+    pub birth_date: String,
 }
 
 /// 主题模式白名单
@@ -212,6 +215,7 @@ impl Default for AppSettings {
             accent: DEFAULT_ACCENT.to_string(),
             font: DEFAULT_FONT.to_string(),
             font_scale: 1.0,
+            birth_date: String::new(),
         }
     }
 }
@@ -237,6 +241,32 @@ pub fn normalize_choice(value: &str, allowed: &[&str], fallback: &str) -> String
         .unwrap_or_else(|| fallback.to_string())
 }
 
+/// 生日只认 `YYYY-MM-DD`。非法值一律当没填——
+/// 运势那栏拿不到星座时本来就退化成轮播十二星座，存一个半截日期反而更麻烦。
+/// 合法性直接问星座模块，顺带把「2 月 30 号」这种也挡掉。
+pub fn normalize_birth_date(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    let mut parts = trimmed.split('-');
+    let year = parts.next().and_then(|v| v.parse::<i32>().ok());
+    let month = parts.next().and_then(|v| v.parse::<u32>().ok());
+    let day = parts.next().and_then(|v| v.parse::<u32>().ok());
+    // 多一段说明格式不对，比如 2026-1-1-1
+    if parts.next().is_some() {
+        return String::new();
+    }
+    match (year, month, day) {
+        (Some(y), Some(m), Some(d))
+            if (1900..=2100).contains(&y) && crate::horoscope::zodiac_of(y, m, d).is_some() =>
+        {
+            format!("{y:04}-{m:02}-{d:02}")
+        }
+        _ => String::new(),
+    }
+}
+
 impl AppSettings {
     /// 读盘、落盘前统一过一遍：外观字段按白名单收紧，其余原样
     pub fn normalized(mut self) -> Self {
@@ -244,6 +274,7 @@ impl AppSettings {
         self.accent = normalize_choice(&self.accent, &ACCENTS, DEFAULT_ACCENT);
         self.font = normalize_choice(&self.font, &FONTS, DEFAULT_FONT);
         self.font_scale = normalize_font_scale(self.font_scale);
+        self.birth_date = normalize_birth_date(&self.birth_date);
         self
     }
 }
@@ -262,6 +293,7 @@ pub struct AppSettingsPatch {
     pub accent: Option<String>,
     pub font: Option<String>,
     pub font_scale: Option<f64>,
+    pub birth_date: Option<String>,
 }
 
 #[cfg(test)]

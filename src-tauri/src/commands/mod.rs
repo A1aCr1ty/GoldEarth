@@ -4,6 +4,7 @@ pub mod agents;
 pub mod market;
 pub mod weather;
 pub mod library;
+pub mod horoscope;
 
 use std::sync::Arc;
 

@@ -3,6 +3,7 @@ mod agents;
 mod commands;
 mod market;
 mod weather;
+mod horoscope;
 
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -81,6 +82,7 @@ pub fn run() {
             commands::market::seed_watchlist,
             commands::weather::weather_report,
             commands::weather::search_cities,
+            commands::horoscope::horoscope_today,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

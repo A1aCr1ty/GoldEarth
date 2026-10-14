@@ -11,15 +11,32 @@ export default function SettingsPage() {
   const [info, setInfo] = useState<StorageInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [binPath, setBinPath] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [saved, setSaved] = useState(false);
   useEffect(() => {
     tauri.getStorageInfo().then(setInfo).catch((e) => setError(String(e)));
-    tauri.getSettings().then((s) => setBinPath(s.agentBinPath ?? "")).catch((e) => setError(String(e)));
+    tauri.getSettings()
+      .then((s) => {
+        setBinPath(s.agentBinPath ?? "");
+        setBirthDate(s.birthDate ?? "");
+      })
+      .catch((e) => setError(String(e)));
   }, []);
   async function handleSaveBinPath() {
     try {
       const s = await tauri.updateSettings({ agentBinPath: binPath.trim() });
       setBinPath(s.agentBinPath ?? "");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+  async function handleSaveBirthDate() {
+    try {
+      const s = await tauri.updateSettings({ birthDate: birthDate.trim() });
+      // 后端会校验并规范化（补零、挡掉 2 月 30 号），回填存下来的那份
+      setBirthDate(s.birthDate ?? "");
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     } catch (e) {
@@ -47,6 +64,32 @@ export default function SettingsPage() {
                 <p><span className="text-muted-foreground">笔记数：</span><Badge variant="secondary" className="ml-1">{info.totalNotes}</Badge></p>
               </>
             )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>每日推送</CardTitle>
+            <CardDescription>填生日后，首页的运势只显示你本人的星座。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="space-y-1.5">
+              <Label htmlFor="birth-date">生日（可选）</Label>
+              <Input
+                id="birth-date"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="max-w-[12rem]"
+              />
+              <p className="text-xs text-muted-foreground">
+                只用来推算星座（月日即可，年份仅用于校验日期是否合法），不会上传到任何地方。
+                留空时首页运势会轮播十二星座。
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleSaveBirthDate}>保存</Button>
+              {saved && <span className="text-xs text-muted-foreground">已保存</span>}
+            </div>
           </CardContent>
         </Card>
         <Card>

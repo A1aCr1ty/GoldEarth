@@ -54,4 +54,7 @@ export const tauri = {
   // ===== 天气 =====
   weatherReport(city?: string) { return invoke<import("@/types").WeatherReport>("weather_report", { city: city ?? null }); },
   searchCities(query: string) { return invoke<import("@/types").CityOption[]>("search_cities", { query }); },
+  // ===== 星座运势 =====
+  /** 不传 sign 就按设置里的生日推星座；传了则直接查那一个 */
+  horoscopeToday(sign?: string) { return invoke<import("@/types").Horoscope>("horoscope_today", { sign: sign ?? null }); },
 };

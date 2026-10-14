@@ -79,6 +79,46 @@ export interface AppSettings {
   font?: string;
   /** 字号倍数：0.85 – 1.35 */
   fontScale?: number;
+  /** 生日 YYYY-MM-DD，用来推星座运势；留空则首页轮播十二星座 */
+  birthDate?: string;
+}
+
+// ===== 星座运势 =====
+
+/** 运势的一个维度：整体 / 爱情 / 事业 / 财运 / 健康 */
+export interface HoroscopeAspect {
+  /** all / love / work / money / health */
+  key: string;
+  /** 整体 / 爱情 / … */
+  label: string;
+  /** 星级 1–5；上游给的不是这个范围就是 0，界面上不画星 */
+  stars: number;
+  /** 指数，形如 "66%" */
+  index: string;
+  /** 解读正文（后端已清掉句尾残留） */
+  text: string;
+}
+
+export interface Horoscope {
+  /** 接口用的英文星座名，如 aquarius */
+  sign: string;
+  /** 中文星座名，如 水瓶座 */
+  title: string;
+  /** 「今日运势」 */
+  period: string;
+  /** 「10月14日」 */
+  date: string;
+  /** 一句话提要 */
+  shortComment: string;
+  aspects: HoroscopeAspect[];
+  /** 幸运色 / 幸运星座 / 幸运数字：上游会串位，后端校验不过就不给 */
+  luckyColor?: string;
+  luckyConstellation?: string;
+  luckyNumber?: string;
+  /** 「宜户外散步舒展」 */
+  todoYi?: string;
+  /** 「忌冲动购置闲置」 */
+  todoJi?: string;
 }
 
 // ===== 行情 =====
