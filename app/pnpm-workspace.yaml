@@ -1,0 +1,7 @@
+dangerouslyAllowAllBuilds: true
+onlyBuiltDependencies:
+  - esbuild
+# node_modules 当初就是用这个配置装的（见 node_modules/.modules.yaml）。
+# 不写的话 pnpm 会认为配置变了而拒绝增量安装，必须整目录重建。
+publicHoistPattern:
+  - "*"

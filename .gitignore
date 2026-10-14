@@ -1,0 +1,32 @@
+# Node
+node_modules/
+app/dist/
+app/*.tsbuildinfo
+app/vite.config.js
+app/vite.config.d.ts
+
+# Rust
+src-tauri/target/
+src-tauri/gen/
+
+# 本地配置与密钥（不要提交）
+.env
+.env.*
+!.env.example
+
+# 缓存
+*.tsbuildinfo
+app/.vite/
+
+# 日志与临时产物
+*.log
+*.tmp
+*.bak
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
