@@ -57,4 +57,13 @@ export const tauri = {
   // ===== 星座运势 =====
   /** 不传 sign 就按设置里的生日推星座；传了则直接查那一个 */
   horoscopeToday(sign?: string) { return invoke<import("@/types").Horoscope>("horoscope_today", { sign: sign ?? null }); },
+  // ===== 网上冲浪 =====
+  /** 页面上有哪些平台、各自什么状态（含需不需要 Cookie） */
+  trendingSources() { return invoke<import("@/types").HotSourceInfo[]>("trending_sources"); },
+  /** B 站可切换的榜单口径 */
+  trendingKinds() { return invoke<import("@/types").HotKindInfo[]>("trending_kinds"); },
+  /** 拉一批平台的热榜；sources 不传就是全要 */
+  trendingBoards(sources?: string[], kind?: string, limit?: number) { return invoke<import("@/types").HotBoard[]>("trending_boards", { sources: sources ?? null, kind: kind ?? null, limit: limit ?? null }); },
+  /** 只刷一个平台，冲浪页的单卡刷新用 */
+  trendingBoard(source: string, kind?: string, limit?: number) { return invoke<import("@/types").HotBoard>("trending_board", { source, kind: kind ?? null, limit: limit ?? null }); },
 };

@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
-import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp } from "lucide-react";
+import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass } from "lucide-react";
 const nav = [
   { to: "/home", label: "天气", icon: LayoutDashboard },
+  { to: "/explore", label: "冲浪", icon: Compass },
   { to: "/library", label: "知识库", icon: BookOpen },
   { to: "/stocks", label: "股票", icon: TrendingUp },
   { to: "/notes", label: "笔记", icon: FileText },

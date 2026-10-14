@@ -189,6 +189,12 @@ pub struct AppSettings {
     /// 生日（YYYY-MM-DD），用来推星座运势。留空表示没填，
     /// 首页运势那栏会改成轮播十二星座。
     pub birth_date: String,
+    /// 雪球登录 Cookie。雪球整站架了阿里云 WAF，匿名抓不到，
+    /// 得靠用户自己浏览器里的 Cookie 过 WAF。留空则该平台显示「需要 Cookie」。
+    pub xueqiu_cookie: String,
+    /// 小红书登录 Cookie。注意小红书还要 x-s 签名，
+    /// 光有 Cookie 未必放行；填了至少值得一试。
+    pub xiaohongshu_cookie: String,
 }
 
 /// 主题模式白名单
@@ -216,6 +222,8 @@ impl Default for AppSettings {
             font: DEFAULT_FONT.to_string(),
             font_scale: 1.0,
             birth_date: String::new(),
+            xueqiu_cookie: String::new(),
+            xiaohongshu_cookie: String::new(),
         }
     }
 }
@@ -275,6 +283,9 @@ impl AppSettings {
         self.font = normalize_choice(&self.font, &FONTS, DEFAULT_FONT);
         self.font_scale = normalize_font_scale(self.font_scale);
         self.birth_date = normalize_birth_date(&self.birth_date);
+        // Cookie 粘进来常带首尾空白和换行，发请求前统一收拾干净
+        self.xueqiu_cookie = self.xueqiu_cookie.trim().to_string();
+        self.xiaohongshu_cookie = self.xiaohongshu_cookie.trim().to_string();
         self
     }
 }
@@ -294,6 +305,9 @@ pub struct AppSettingsPatch {
     pub font: Option<String>,
     pub font_scale: Option<f64>,
     pub birth_date: Option<String>,
+    /// 冲浪页的平台 Cookie：只传要改的那个
+    pub xueqiu_cookie: Option<String>,
+    pub xiaohongshu_cookie: Option<String>,
 }
 
 #[cfg(test)]

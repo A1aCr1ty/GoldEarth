@@ -81,6 +81,10 @@ export interface AppSettings {
   fontScale?: number;
   /** 生日 YYYY-MM-DD，用来推星座运势；留空则首页轮播十二星座 */
   birthDate?: string;
+  /** 雪球登录 Cookie（雪球有 WAF，匿名抓不到） */
+  xueqiuCookie?: string;
+  /** 小红书登录 Cookie（小红书还要 x-s 签名，填了也未必放行） */
+  xiaohongshuCookie?: string;
 }
 
 // ===== 星座运势 =====
@@ -336,5 +340,61 @@ export interface LibraryFile {
   modified: string;
   /** 能不能当文本预览 */
   isText: boolean;
+}
+
+// ===== 网上冲浪 / 热榜 =====
+
+/** 一个平台 */
+export interface HotSourceInfo {
+  /** 后端标识：bilibili / weibo / xueqiu / xiaohongshu */
+  value: string;
+  label: string;
+  /** 平台主色，画色块用 */
+  accent: string;
+  /** 这个平台必须登录 Cookie 才拿得到数据 */
+  needsCookie: boolean;
+  /** 用户已经配了 Cookie 吗（不返回 Cookie 内容） */
+  cookieReady: boolean;
+}
+
+/** B 站的榜单口径 */
+export interface HotKindInfo {
+  value: string;
+  label: string;
+}
+
+/** 榜单里的一条 */
+export interface HotItem {
+  /** 从 1 开始 */
+  rank: number;
+  title: string;
+  /** 点击用系统浏览器打开 */
+  url: string;
+  /** 封面图，纯文字榜单为空串 */
+  cover: string;
+  summary: string;
+  author: string;
+  /** 热度展示文案，如「197.4万播放」 */
+  hotText: string;
+  /** 原始热度数值 */
+  hotValue: number;
+  /** 平台自己的标签（分区、「新 / 爆」角标） */
+  tag: string;
+  /** 附加信息 */
+  meta: string;
+}
+
+/** 单个平台的榜单。失败时 items 为空、error 有值，页面照常显示其余平台 */
+export interface HotBoard {
+  source: string;
+  label: string;
+  accent: string;
+  updatedAt: string;
+  items: HotItem[];
+  error?: string;
+  /** 平台要 Cookie 但用户还没配 */
+  needsCookie: boolean;
+  /** 数据来自缓存 */
+  cached: boolean;
 }
 

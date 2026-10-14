@@ -22,6 +22,7 @@ app/.vite/
 *.log
 *.tmp
 *.bak
+.runlogs/
 
 # Editor
 .vscode/

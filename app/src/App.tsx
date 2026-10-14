@@ -7,6 +7,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import StocksPage from "@/pages/StocksPage";
 import HomePage from "@/pages/HomePage";
 import LibraryPage from "@/pages/LibraryPage";
+import ExplorePage from "@/pages/ExplorePage";
 export default function App() {
   return (
     <HashRouter>
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/stocks" element={<StocksPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

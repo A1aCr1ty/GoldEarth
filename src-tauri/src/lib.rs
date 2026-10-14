@@ -4,6 +4,7 @@ mod commands;
 mod market;
 mod weather;
 mod horoscope;
+mod trending;
 
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -83,6 +84,10 @@ pub fn run() {
             commands::weather::weather_report,
             commands::weather::search_cities,
             commands::horoscope::horoscope_today,
+            commands::trending::trending_sources,
+            commands::trending::trending_kinds,
+            commands::trending::trending_boards,
+            commands::trending::trending_board,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
