@@ -21,6 +21,8 @@ interface LibraryState {
   deleteCategory: (id: string) => Promise<void>;
   refreshFiles: (id?: string | null) => Promise<void>;
   importFiles: (sources: string[]) => Promise<void>;
+  importFilesTo: (categoryId: string, sources: string[]) => Promise<void>;
+  importNotesTo: (categoryId: string, noteIds: string[]) => Promise<void>;
   deleteFile: (name: string) => Promise<void>;
 }
 
@@ -105,8 +107,25 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   async importFiles(sources) {
     const id = get().currentId;
     if (!id || sources.length === 0) return;
+    await get().importFilesTo(id, sources);
+  },
+
+  async importFilesTo(id, sources) {
+    if (sources.length === 0) return;
     const files = await tauri.importLibraryFiles(id, sources);
-    set((s) => ({ files, categories: withCount(s.categories, id, files.length) }));
+    set((s) => ({
+      categories: withCount(s.categories, id, files.length),
+      ...(s.currentId === id ? { files } : {}),
+    }));
+  },
+
+  async importNotesTo(id, noteIds) {
+    if (noteIds.length === 0) return;
+    const files = await tauri.importNotesToLibrary(id, noteIds);
+    set((s) => ({
+      categories: withCount(s.categories, id, files.length),
+      ...(s.currentId === id ? { files } : {}),
+    }));
   },
 
   async deleteFile(name) {

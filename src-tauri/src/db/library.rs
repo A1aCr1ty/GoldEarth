@@ -157,7 +157,12 @@ impl Library {
         dir.is_dir().then_some(dir)
     }
 
-    fn unique_name(&self, items: &[LibraryCategory], wanted: &str, skip_id: Option<&str>) -> String {
+    fn unique_name(
+        &self,
+        items: &[LibraryCategory],
+        wanted: &str,
+        skip_id: Option<&str>,
+    ) -> String {
         let taken = |candidate: &str, skip: Option<&str>| {
             items
                 .iter()
@@ -191,7 +196,11 @@ impl Library {
             .map(|e| describe_file(&e.path()))
             .collect();
         // 最近收进来的排前面
-        out.sort_by(|a, b| b.modified.cmp(&a.modified).then_with(|| a.name.cmp(&b.name)));
+        out.sort_by(|a, b| {
+            b.modified
+                .cmp(&a.modified)
+                .then_with(|| a.name.cmp(&b.name))
+        });
         out
     }
 
@@ -275,7 +284,10 @@ impl Library {
             || name.contains('/')
             || name.contains('\\')
             || name.contains("..")
-            || Path::new(name).file_name().map(|f| f.to_string_lossy().to_string()) != Some(name.to_string())
+            || Path::new(name)
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                != Some(name.to_string())
         {
             return Err(std::io::Error::other(format!("非法的文件名：{name}")));
         }
@@ -317,7 +329,10 @@ fn describe_file(path: &Path) -> LibraryFile {
 }
 
 fn stamp_iso(t: SystemTime) -> String {
-    let secs = t.duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let secs = t
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
     chrono::DateTime::from_timestamp(secs as i64, 0)
         .map(|dt| dt.to_rfc3339())
         .unwrap_or_default()
@@ -328,7 +343,8 @@ mod tests {
     use super::*;
 
     fn temp_library(tag: &str) -> (Library, PathBuf) {
-        let dir = std::env::temp_dir().join(format!("goldearth_library_{tag}_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("goldearth_library_{tag}_{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let lib = Library::new(&dir);
         lib.ensure().unwrap();
@@ -392,13 +408,18 @@ mod tests {
         let a = src_dir.join("报表.csv");
         fs::write(&a, "a,b\n1,2\n").unwrap();
 
-        lib.import_files("c1", &[a.to_string_lossy().to_string()]).unwrap();
+        lib.import_files("c1", &[a.to_string_lossy().to_string()])
+            .unwrap();
         // 再导一次同名文件：不应覆盖，而是加后缀
-        lib.import_files("c1", &[a.to_string_lossy().to_string()]).unwrap();
+        lib.import_files("c1", &[a.to_string_lossy().to_string()])
+            .unwrap();
 
         let names: Vec<String> = lib.list_files("c1").into_iter().map(|f| f.name).collect();
         assert!(names.contains(&"报表.csv".to_string()));
-        assert!(names.contains(&"报表 (2).csv".to_string()), "重名要加后缀：{names:?}");
+        assert!(
+            names.contains(&"报表 (2).csv".to_string()),
+            "重名要加后缀：{names:?}"
+        );
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -410,8 +431,14 @@ mod tests {
         fs::write(&src, "# hi\n").unwrap();
         let bin = dir.join("photo.png");
         fs::write(&bin, [0x89, 0x50, 0x4e, 0x47]).unwrap();
-        lib.import_files("c1", &[src.to_string_lossy().to_string(), bin.to_string_lossy().to_string()])
-            .unwrap();
+        lib.import_files(
+            "c1",
+            &[
+                src.to_string_lossy().to_string(),
+                bin.to_string_lossy().to_string(),
+            ],
+        )
+        .unwrap();
 
         let files = lib.list_files("c1");
         let md = files.iter().find(|f| f.name == "readme.md").unwrap();
@@ -420,8 +447,15 @@ mod tests {
         assert!(!png.is_text, "图片不该当文本预览");
         assert!(!png.modified.is_empty(), "要有修改时间给界面排序");
 
-        assert_eq!(lib.read_text("c1", "readme.md").unwrap().as_deref(), Some("# hi\n"));
-        assert_eq!(lib.read_text("c1", "photo.png").unwrap(), None, "二进制不给预览");
+        assert_eq!(
+            lib.read_text("c1", "readme.md").unwrap().as_deref(),
+            Some("# hi\n")
+        );
+        assert_eq!(
+            lib.read_text("c1", "photo.png").unwrap(),
+            None,
+            "二进制不给预览"
+        );
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -445,7 +479,8 @@ mod tests {
         lib.insert_category(category("c1", "临时")).unwrap();
         let src = dir.join("a.md");
         fs::write(&src, "x").unwrap();
-        lib.import_files("c1", &[src.to_string_lossy().to_string()]).unwrap();
+        lib.import_files("c1", &[src.to_string_lossy().to_string()])
+            .unwrap();
         let folder = lib.category_dir("临时");
         assert!(folder.is_dir());
 

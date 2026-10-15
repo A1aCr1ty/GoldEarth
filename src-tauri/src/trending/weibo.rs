@@ -7,7 +7,7 @@
 use serde::Deserialize;
 
 use super::http::{client, UA};
-use super::types::{compact, HotItem};
+use super::types::{compact, urlencode, HotItem};
 
 const HOT_SEARCH_URL: &str = "https://weibo.com/ajax/side/hotSearch";
 
@@ -86,7 +86,12 @@ pub async fn fetch(limit: usize) -> Result<Vec<HotItem>, String> {
         .await
         .map_err(|e| format!("请求失败：{e}"))?
         .error_for_status()
-        .map_err(|e| format!("微博返回 {}：{e}", e.status().map(|s| s.as_u16()).unwrap_or(0)))?
+        .map_err(|e| {
+            format!(
+                "微博返回 {}：{e}",
+                e.status().map(|s| s.as_u16()).unwrap_or(0)
+            )
+        })?
         .json()
         .await
         .map_err(|e| format!("解析失败：{e}"))?;
@@ -136,10 +141,7 @@ fn convert(w: Word) -> Option<HotItem> {
     Some(HotItem {
         rank: 0,
         title: text,
-        url: format!(
-            "https://s.weibo.com/weibo?q={}",
-            urlencode(&query)
-        ),
+        url: format!("https://s.weibo.com/weibo?q={}", urlencode(&query)),
         cover: String::new(),
         summary: String::new(),
         author: String::new(),
@@ -152,23 +154,6 @@ fn convert(w: Word) -> Option<HotItem> {
         tag: w.badge(),
         meta: w.category.unwrap_or_default(),
     })
-}
-
-/// 只编码 URL 查询串里真正会出事的几个字符，够用且不引额外依赖
-fn urlencode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        match ch {
-            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => out.push(ch),
-            _ => {
-                let mut buf = [0u8; 4];
-                for byte in ch.encode_utf8(&mut buf).as_bytes() {
-                    out.push_str(&format!("%{byte:02X}"));
-                }
-            }
-        }
-    }
-    out
 }
 
 #[cfg(test)]
@@ -216,13 +201,5 @@ mod tests {
     #[test]
     fn drops_empty_words() {
         assert!(convert(Word::default()).is_none());
-    }
-
-    #[test]
-    fn encodes_reserved_characters() {
-        assert_eq!(urlencode("a b"), "a%20b");
-        assert_eq!(urlencode("#a#"), "%23a%23");
-        assert_eq!(urlencode("中文"), "%E4%B8%AD%E6%96%87");
-        assert_eq!(urlencode("ok-_.~"), "ok-_.~");
     }
 }

@@ -115,7 +115,11 @@ pub struct AgentRun {
     pub error: Option<String>,
     #[serde(alias = "started_at")]
     pub started_at: String,
-    #[serde(default, alias = "finished_at", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "finished_at",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub finished_at: Option<String>,
     /// codex 的会话 ID，用于 `codex exec resume <id>` 接着上一轮对话
     #[serde(default, alias = "session_id", skip_serializing_if = "Option::is_none")]
@@ -129,6 +133,73 @@ pub struct AgentRun {
     /// 这轮对话是为哪个知识库分类发起的；知识库按「每个分类一个独立会话」用它分区
     #[serde(default, alias = "library_id", skip_serializing_if = "Option::is_none")]
     pub library_id: Option<String>,
+}
+
+/// 关注的物品：想盯着看看它跌到多少再入
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PriceTarget {
+    pub id: String,
+    /// 展示用的名字，比如「AirPods Pro2」
+    pub name: String,
+    /// 搜价时用的关键词。留空就直接拿 name 去搜
+    #[serde(default)]
+    pub keyword: String,
+    #[serde(default)]
+    pub note: String,
+    #[serde(alias = "created_at")]
+    pub created_at: String,
+}
+
+/// 一条价格记录。
+///
+/// 存的是**均价**而不是单条在售价：闲鱼同款能搜出几十条，
+/// 逐条画线噪声太大，先在采集时求平均，再按天聚合成趋势。
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PriceSample {
+    pub id: String,
+    pub target_id: String,
+    /// 均价，单位元
+    pub price: f64,
+    /// manual = 手动记的；xianyu = 闲鱼搜的
+    #[serde(default)]
+    pub source: String,
+    /// 这个均价背后统计了几条在售；手动记的记 1
+    #[serde(default)]
+    pub samples: u32,
+    #[serde(alias = "recorded_at")]
+    pub recorded_at: String,
+}
+
+/// 按天聚合出来的一个点，画趋势线用
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrendPoint {
+    pub day: String,
+    pub avg: f64,
+    pub min: f64,
+    pub max: f64,
+    /// 这一天记了几次
+    pub count: u32,
+}
+
+/// 首页「价格追踪」卡里的一行：物品 + 当前价 + 涨跌 + 迷你走势
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PriceOverview {
+    pub target: PriceTarget,
+    /// 最近一次的均价
+    pub latest: Option<f64>,
+    /// 最新价相对上一条的涨跌幅；只有一条记录时算不出来
+    pub change_pct: Option<f64>,
+    /// 一共记了几次
+    pub samples: u32,
+    /// 跨了多少天
+    pub days: u32,
+    /// 最近几天的均价，画迷你走势图
+    pub spark: Vec<f64>,
+    pub updated_at: Option<String>,
 }
 
 /// 知识库里的一类资料：分类绑一个 agent，agent 就在这个分类的目录里工作
@@ -195,12 +266,28 @@ pub struct AppSettings {
     /// 小红书登录 Cookie。注意小红书还要 x-s 签名，
     /// 光有 Cookie 未必放行；填了至少值得一试。
     pub xiaohongshu_cookie: String,
+    /// 闲鱼登录 Cookie。
+    ///
+    /// **目前没有任何代码读它**——抓价走的是 App 自带的 WebView2，
+    /// 登录态由那扇窗自己管（点「打开闲鱼」登录一次就会一直复用）。
+    /// 这个字段先留着：用户真需要手动带 Cookie 时有个落点，
+    /// 但别以为填了它就会生效。
+    pub xianyu_cookie: String,
+    /// 冲浪页勾选展示哪些平台。
+    /// `None` = 还没配过（前端按默认全选处理）；
+    /// `Some(vec![])` = 用户主动把四个都取消了——这两种必须分得清，
+    /// 否则重进页面会把「我不要看」当成「还没设置」又全勾回来。
+    pub explore_sources: Option<Vec<String>>,
+    /// 冲浪页要不要自动刷新。`None` = 没配过，默认开。
+    pub explore_auto_refresh: Option<bool>,
 }
 
 /// 主题模式白名单
 pub const THEME_MODES: [&str; 3] = ["light", "dark", "system"];
 /// 主题色白名单：和前端 ACCENT_PRESETS 一一对应
-pub const ACCENTS: [&str; 7] = ["default", "blue", "violet", "teal", "green", "amber", "rose"];
+pub const ACCENTS: [&str; 7] = [
+    "default", "blue", "violet", "teal", "green", "amber", "rose",
+];
 /// 字体白名单：和前端 FONT_PRESETS 一一对应
 pub const FONTS: [&str; 5] = ["system", "sans", "serif", "kai", "mono"];
 /// 字号倍数上下限：再小看不清，再大一屏放不下几行
@@ -224,6 +311,9 @@ impl Default for AppSettings {
             birth_date: String::new(),
             xueqiu_cookie: String::new(),
             xiaohongshu_cookie: String::new(),
+            xianyu_cookie: String::new(),
+            explore_sources: None,
+            explore_auto_refresh: None,
         }
     }
 }
@@ -275,6 +365,27 @@ pub fn normalize_birth_date(value: &str) -> String {
     }
 }
 
+/// 冲浪页勾选的平台：只留认识的，并按 `Source::all()` 的固定顺序去重。
+///
+/// settings.json 是纯文本，手改可能塞进 `douyin` 这种已经摘掉的平台，
+/// 也可能大小写不对；前端是拿这个数组去查卡片的，塞进不认识的就会
+/// 渲染出一块永远加载不出来的空卡。
+///
+/// 注意空列表要原样保留：那是「用户把四个都取消了」，和 `None`（没配过）不是一回事。
+pub fn normalize_explore_sources(values: Option<Vec<String>>) -> Option<Vec<String>> {
+    let values = values?;
+    let wanted: Vec<String> = values
+        .iter()
+        .map(|v| v.trim().to_ascii_lowercase())
+        .collect();
+    let out: Vec<String> = crate::trending::Source::all()
+        .iter()
+        .filter(|s| wanted.iter().any(|w| w == s.id()))
+        .map(|s| s.id().to_string())
+        .collect();
+    Some(out)
+}
+
 impl AppSettings {
     /// 读盘、落盘前统一过一遍：外观字段按白名单收紧，其余原样
     pub fn normalized(mut self) -> Self {
@@ -286,6 +397,8 @@ impl AppSettings {
         // Cookie 粘进来常带首尾空白和换行，发请求前统一收拾干净
         self.xueqiu_cookie = self.xueqiu_cookie.trim().to_string();
         self.xiaohongshu_cookie = self.xiaohongshu_cookie.trim().to_string();
+        self.xianyu_cookie = self.xianyu_cookie.trim().to_string();
+        self.explore_sources = normalize_explore_sources(self.explore_sources);
         self
     }
 }
@@ -308,6 +421,11 @@ pub struct AppSettingsPatch {
     /// 冲浪页的平台 Cookie：只传要改的那个
     pub xueqiu_cookie: Option<String>,
     pub xiaohongshu_cookie: Option<String>,
+    /// 闲鱼登录 Cookie（目前只存不用，留个落点）
+    pub xianyu_cookie: Option<String>,
+    /// 冲浪页勾选的平台：传 `[]` 表示四个都取消（和「不传」是两回事）
+    pub explore_sources: Option<Vec<String>>,
+    pub explore_auto_refresh: Option<bool>,
 }
 
 #[cfg(test)]
@@ -337,10 +455,16 @@ mod tests {
         assert!(v.get("agent_id").is_none());
         assert!(v.get("started_at").is_none());
         assert!(v.get("note_id").is_none(), "没关联笔记时不该出现该字段");
-        assert!(v.get("library_id").is_none(), "没关联知识库分类时不该出现该字段");
+        assert!(
+            v.get("library_id").is_none(),
+            "没关联知识库分类时不该出现该字段"
+        );
 
         // 知识库分类的 run：scope 字段用 camelCase，前端按它分区对话
-        let scoped = AgentRun { library_id: Some("c1".into()), ..run.clone() };
+        let scoped = AgentRun {
+            library_id: Some("c1".into()),
+            ..run.clone()
+        };
         let sv = serde_json::to_value(&scoped).unwrap();
         assert_eq!(sv["libraryId"], "c1");
     }
@@ -361,7 +485,8 @@ mod tests {
     #[test]
     fn settings_round_trips_watchlist_seeded() {
         // 老配置文件里没有这个字段，读出来应该是 false 而不是报错
-        let legacy: AppSettings = serde_json::from_str(r#"{"agentBinPath":"","indexCodes":[]}"#).unwrap();
+        let legacy: AppSettings =
+            serde_json::from_str(r#"{"agentBinPath":"","indexCodes":[]}"#).unwrap();
         assert!(!legacy.watchlist_seeded, "缺字段要退回 false");
 
         let settings = AppSettings {
@@ -420,7 +545,11 @@ mod tests {
         assert_eq!(kept.font, "serif");
         assert_eq!(kept.font_scale, 1.1);
 
-        let spaced = AppSettings { theme: " Dark ".into(), ..AppSettings::default() }.normalized();
+        let spaced = AppSettings {
+            theme: " Dark ".into(),
+            ..AppSettings::default()
+        }
+        .normalized();
         assert_eq!(spaced.theme, "dark", "前后空格应该被去掉");
     }
 
@@ -449,5 +578,58 @@ mod tests {
         assert_eq!(patch.font_scale, Some(1.1));
         assert_eq!(patch.font, None, "没传的字段保持 None");
     }
-}
 
+    #[test]
+    fn explore_sources_keep_canonical_order_and_drop_unknowns() {
+        // 大小写、手抖重复、已经不存在的平台，一起收拾掉
+        let out = normalize_explore_sources(Some(vec![
+            "Weibo".into(),
+            "douyin".into(),
+            "bilibili".into(),
+            " weibo ".into(),
+        ]))
+        .expect("配过就该有值");
+        assert_eq!(out, vec!["bilibili".to_string(), "weibo".to_string()]);
+
+        // 空列表是「用户把四个都取消了」，必须原样留着
+        assert_eq!(
+            normalize_explore_sources(Some(vec![])),
+            Some(vec![]),
+            "全取消不能被当成没配过"
+        );
+        assert_eq!(normalize_explore_sources(None), None, "没配过就是 None");
+
+        // 全是垃圾值时归零，前端会显示「一个平台都没选」而不是渲染出空卡
+        assert_eq!(
+            normalize_explore_sources(Some(vec!["douyin".into()])),
+            Some(vec![])
+        );
+    }
+
+    #[test]
+    fn explore_settings_survive_a_round_trip() {
+        let legacy: AppSettings = serde_json::from_str(r#"{"agentBinPath":"x"}"#).unwrap();
+        assert_eq!(legacy.explore_sources, None, "老配置读出来是没配过");
+        assert_eq!(legacy.explore_auto_refresh, None, "老配置默认交给前端决定");
+
+        let tuned = AppSettings {
+            explore_sources: Some(vec!["weibo".into(), "bogus".into()]),
+            explore_auto_refresh: Some(false),
+            ..AppSettings::default()
+        }
+        .normalized();
+        let v = serde_json::to_value(&tuned).unwrap();
+        assert_eq!(v["exploreSources"][0], "weibo");
+        assert_eq!(v["exploreAutoRefresh"], false);
+
+        // 局部更新：传空数组要能表达「全取消」，不传则是保持原值
+        let patch: AppSettingsPatch =
+            serde_json::from_str(r#"{"exploreSources":[],"exploreAutoRefresh":false}"#).unwrap();
+        assert_eq!(patch.explore_sources, Some(vec![]));
+        assert_eq!(patch.explore_auto_refresh, Some(false));
+
+        let partial: AppSettingsPatch =
+            serde_json::from_str(r#"{"exploreAutoRefresh":true}"#).unwrap();
+        assert_eq!(partial.explore_sources, None, "没传的字段保持 None");
+    }
+}

@@ -30,6 +30,13 @@ parking_lot = "0.12"
 # 行情数据抓取走 Rust 侧，绕开 WebView 的跨域限制；用 rustls 免装 OpenSSL
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "gzip"] }
 
+[dev-dependencies]
+# 抓价窗能不能调到 xianyu_report，全押在 capabilities/xianyu.json 的
+# remote.urls 上，而匹配逻辑（ipc/authority.rs 的 Origin::matches → UrlPattern::test）
+# 藏在 Tauri 里看不见。这里把它拉进来，在单测里直接验我们写的 pattern
+# 到底匹配不匹配真实的闲鱼地址，不靠推理。
+tauri-utils = "2"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

@@ -32,7 +32,11 @@ fn f(v: &Value, key: &str) -> f64 {
 /// 解析 K 线。`klines` 里每行是逗号分隔的：
 /// `日期,开盘,收盘,最高,最低,成交量,成交额,振幅,涨跌幅,涨跌额,换手率`
 pub fn parse_klines(json: &Value) -> Vec<Candle> {
-    let Some(list) = json.get("data").and_then(|d| d.get("klines")).and_then(|k| k.as_array()) else {
+    let Some(list) = json
+        .get("data")
+        .and_then(|d| d.get("klines"))
+        .and_then(|k| k.as_array())
+    else {
         return Vec::new();
     };
     list.iter()
@@ -66,10 +70,15 @@ pub fn parse_klines(json: &Value) -> Vec<Candle> {
 /// 口径不统一，这里自己用累计成交额 / 累计成交量算分时均价线，
 /// 口径明确且和常见行情软件一致。
 pub fn parse_trends(json: &Value) -> Trend {
-    let Some(data) = json.get("data") else { return Trend::default() };
+    let Some(data) = json.get("data") else {
+        return Trend::default();
+    };
     let pre_close = data.get("preClose").and_then(|v| v.as_f64()).unwrap_or(0.0);
     let Some(list) = data.get("trends").and_then(|t| t.as_array()) else {
-        return Trend { pre_close, points: Vec::new() };
+        return Trend {
+            pre_close,
+            points: Vec::new(),
+        };
     };
 
     let mut cum_amount = 0.0;
@@ -86,7 +95,11 @@ pub fn parse_trends(json: &Value) -> Trend {
             cum_amount += num(6);
             cum_volume += num(5);
             // 成交量单位是手，换算成股
-            let avg_price = if cum_volume > 0.0 { cum_amount / (cum_volume * 100.0) } else { 0.0 };
+            let avg_price = if cum_volume > 0.0 {
+                cum_amount / (cum_volume * 100.0)
+            } else {
+                0.0
+            };
             // 时间字段是 `2026-10-14 09:30`，只留时分
             let time = p[0].rsplit(' ').next().unwrap_or("").to_string();
             Some(TrendPoint {
@@ -104,7 +117,11 @@ pub fn parse_trends(json: &Value) -> Trend {
 
 /// 解析榜单（涨跌幅 / 成交额 / 换手率）
 pub fn parse_ranks(json: &Value) -> Vec<RankItem> {
-    let Some(list) = json.get("data").and_then(|d| d.get("diff")).and_then(|d| d.as_array()) else {
+    let Some(list) = json
+        .get("data")
+        .and_then(|d| d.get("diff"))
+        .and_then(|d| d.as_array())
+    else {
         return Vec::new();
     };
     list.iter()
@@ -112,7 +129,11 @@ pub fn parse_ranks(json: &Value) -> Vec<RankItem> {
             let raw = d.get("f12").and_then(|v| v.as_str()).unwrap_or("");
             RankItem {
                 code: symbol::normalize(raw),
-                name: d.get("f14").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                name: d
+                    .get("f14")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
                 price: f(d, "f2"),
                 change_pct: f(d, "f3"),
                 change: f(d, "f4"),
@@ -137,18 +158,41 @@ pub fn parse_ranks(json: &Value) -> Vec<RankItem> {
 
 /// 解析资金流
 pub fn parse_fund_flow(json: &Value) -> Vec<FundFlow> {
-    let Some(list) = json.get("data").and_then(|d| d.get("diff")).and_then(|d| d.as_array()) else {
+    let Some(list) = json
+        .get("data")
+        .and_then(|d| d.get("diff"))
+        .and_then(|d| d.as_array())
+    else {
         return Vec::new();
     };
     list.iter()
         .map(|d| FundFlow {
             code: symbol::normalize(d.get("f12").and_then(|v| v.as_str()).unwrap_or("")),
-            name: d.get("f14").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            main: FundTier { net: f(d, "f62"), pct: f(d, "f184") },
-            super_large: FundTier { net: f(d, "f66"), pct: f(d, "f69") },
-            large: FundTier { net: f(d, "f72"), pct: f(d, "f75") },
-            medium: FundTier { net: f(d, "f78"), pct: f(d, "f81") },
-            small: FundTier { net: f(d, "f84"), pct: f(d, "f87") },
+            name: d
+                .get("f14")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            main: FundTier {
+                net: f(d, "f62"),
+                pct: f(d, "f184"),
+            },
+            super_large: FundTier {
+                net: f(d, "f66"),
+                pct: f(d, "f69"),
+            },
+            large: FundTier {
+                net: f(d, "f72"),
+                pct: f(d, "f75"),
+            },
+            medium: FundTier {
+                net: f(d, "f78"),
+                pct: f(d, "f81"),
+            },
+            small: FundTier {
+                net: f(d, "f84"),
+                pct: f(d, "f87"),
+            },
         })
         .collect()
 }
@@ -242,7 +286,10 @@ mod tests {
         assert_eq!(fl[0].code, "sh600519");
         // 超大单 + 大单 应该等于主力净额，字段错位这条立刻挂
         let sum = fl[0].super_large.net + fl[0].large.net;
-        assert!((sum - fl[0].main.net).abs() < 1.0, "超大单+大单应等于主力净额");
+        assert!(
+            (sum - fl[0].main.net).abs() < 1.0,
+            "超大单+大单应等于主力净额"
+        );
         assert_eq!(fl[0].main.pct, 3.93);
         assert_eq!(fl[0].small.pct, -0.02);
     }

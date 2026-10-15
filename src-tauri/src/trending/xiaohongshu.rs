@@ -89,13 +89,32 @@ struct Cover {
     url: Option<String>,
 }
 
+/// 把状态码翻译成「接下来该做什么」。
+///
+/// 关键在 406：实测（2026-10-15）带上完整登录 Cookie 仍然是 406。
+/// 登录态和请求签名是两回事——Cookie 解决前者，`x-s` / `x-t` 解决后者，
+/// 而后者由官方混淆 JS 现算、没有公开算法。所以这句不能写成「重试一下」，
+/// 那只会让用户反复粘 Cookie。
+fn describe_status(code: u16) -> String {
+    match code {
+        404 => "小红书接口返回 404：缺 x-s 签名或 Cookie 无效".to_string(),
+        401 | 403 => {
+            "小红书拒绝了请求（401/403）：Cookie 可能已过期，重新登录再复制一次".to_string()
+        }
+        406 => "小红书返回 406 Not Acceptable：x-s / x-t 签名没通过。这套签名由官方混淆 JS \
+                现算、没有公开算法，登录 Cookie 只解决登录态、解决不了签名——\
+                重试和换 Cookie 都没用，要取到数据只能逆向签名或走第三方聚合服务"
+            .to_string(),
+        other => format!("小红书返回 HTTP {other}"),
+    }
+}
+
 /// 抓小红书推荐流
 pub async fn fetch(cookie: &str, limit: usize) -> Result<Vec<HotItem>, String> {
     let cookie = cookie.trim();
     if cookie.is_empty() {
         return Err(
-            "小红书需要登录 Cookie，且接口要 x-s 签名：请先在设置里粘贴 Cookie 再试"
-                .to_string(),
+            "小红书需要登录 Cookie，且接口要 x-s 签名：请先在设置里粘贴 Cookie 再试".to_string(),
         );
     }
 
@@ -117,11 +136,7 @@ pub async fn fetch(cookie: &str, limit: usize) -> Result<Vec<HotItem>, String> {
     let text = resp.text().await.map_err(|e| format!("读取失败：{e}"))?;
 
     if !status.is_success() {
-        return Err(match status.as_u16() {
-            404 => "小红书接口返回 404，说明请求被拒（缺 x-s 签名或 Cookie 无效）".to_string(),
-            401 | 403 => "小红书拒绝了请求（401/403）：Cookie 可能已过期".to_string(),
-            code => format!("小红书返回 HTTP {code}"),
-        });
+        return Err(describe_status(status.as_u16()));
     }
 
     let parsed: Resp =
@@ -192,13 +207,31 @@ fn convert(item: Item) -> Option<HotItem> {
         // 接口给的是展示字符串，这里只留一个占位用于同平台内排序
         hot_value: 0,
         tag: String::new(),
-        meta: it.comment_count.map(|c| format!("{c} 评论")).unwrap_or_default(),
+        meta: it
+            .comment_count
+            .map(|c| format!("{c} 评论"))
+            .unwrap_or_default(),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explains_why_406_is_not_worth_retrying() {
+        let msg = describe_status(406);
+        assert!(msg.contains("签名"), "要说清是签名问题：{msg}");
+        assert!(msg.contains("406"));
+        assert!(
+            !msg.contains("过期") && !msg.contains("重新登录"),
+            "别把签名失败引到「Cookie 过期」上去，那是 401/403 的事：{msg}"
+        );
+        // 其余状态码各自有说法
+        assert!(describe_status(401).contains("过期"));
+        assert!(describe_status(404).contains("签名"));
+        assert_eq!(describe_status(500), "小红书返回 HTTP 500");
+    }
 
     #[test]
     fn builds_explore_url_with_token() {

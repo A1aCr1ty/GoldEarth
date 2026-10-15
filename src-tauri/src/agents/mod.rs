@@ -134,7 +134,10 @@ mod tests {
             return;
         }
         let resolved = resolve_program("codex", None);
-        assert!(resolved.is_file(), "codex 未能解析到可执行文件: {resolved:?}");
+        assert!(
+            resolved.is_file(),
+            "codex 未能解析到可执行文件: {resolved:?}"
+        );
     }
 
     #[tokio::test]
@@ -315,7 +318,10 @@ mod tests {
         };
         let cmd = super::build_command(&agent, "MARKER_PROMPT", None, None);
         let rendered = format!("{:?}", cmd.as_std().get_args().collect::<Vec<_>>());
-        assert!(rendered.contains("--json"), "codex 应自动带上 --json: {rendered}");
+        assert!(
+            rendered.contains("--json"),
+            "codex 应自动带上 --json: {rendered}"
+        );
         assert!(
             rendered.contains("--skip-git-repo-check"),
             "codex 应自动带上 --skip-git-repo-check: {rendered}"
@@ -328,7 +334,10 @@ mod tests {
         agent.kind = crate::db::models::AgentKind::Custom;
         let cmd = super::build_command(&agent, "MARKER_PROMPT", None, None);
         let rendered = format!("{:?}", cmd.as_std().get_args().collect::<Vec<_>>());
-        assert!(!rendered.contains("--json"), "自定义 agent 不应被强加 --json: {rendered}");
+        assert!(
+            !rendered.contains("--json"),
+            "自定义 agent 不应被强加 --json: {rendered}"
+        );
         assert!(
             !rendered.contains("--skip-git-repo-check"),
             "自定义 agent 不应被强加 --skip-git-repo-check: {rendered}"
@@ -403,8 +412,12 @@ mod tests {
 
     #[test]
     fn codex_globals_respect_user_specified_ones() {
-        let mut args: Vec<String> =
-            vec!["-s".into(), "danger-full-access".into(), "exec".into(), "--json".into()];
+        let mut args: Vec<String> = vec![
+            "-s".into(),
+            "danger-full-access".into(),
+            "exec".into(),
+            "--json".into(),
+        ];
         super::ensure_codex_global_args(&mut args, None);
         assert_eq!(
             args,
@@ -484,7 +497,14 @@ mod tests {
             "--json".to_string(),
             sid.to_string(),
         ];
-        new_args.extend(agent.args.iter().skip(1).filter(|a| *a != "--json").cloned());
+        new_args.extend(
+            agent
+                .args
+                .iter()
+                .skip(1)
+                .filter(|a| *a != "--json")
+                .cloned(),
+        );
         assert_eq!(
             new_args,
             vec![
@@ -615,7 +635,11 @@ mod tests {
         };
         let mut cmd = super::build_command(&agent, "hi", None, Some(&dir));
         let status = cmd.output().await.expect("spawn 失败");
-        assert!(status.status.success(), "批处理应执行成功: {:?}", String::from_utf8_lossy(&status.stderr));
+        assert!(
+            status.status.success(),
+            "批处理应执行成功: {:?}",
+            String::from_utf8_lossy(&status.stderr)
+        );
 
         assert!(
             marker.is_file(),
@@ -638,12 +662,18 @@ pub struct RunHandle {
 }
 
 impl RunRegistry {
-    pub fn create_handle(&mut self, run_id: &str) -> (Arc<Mutex<Option<Child>>>, oneshot::Receiver<()>) {
+    pub fn create_handle(
+        &mut self,
+        run_id: &str,
+    ) -> (Arc<Mutex<Option<Child>>>, oneshot::Receiver<()>) {
         let holder: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
         let (tx, rx) = oneshot::channel();
         self.handles.insert(
             run_id.to_string(),
-            RunHandle { cancel: Some(tx), child: holder.clone() },
+            RunHandle {
+                cancel: Some(tx),
+                child: holder.clone(),
+            },
         );
         (holder, rx)
     }
@@ -672,7 +702,11 @@ impl RunRegistry {
 /// CreateProcessW，不会触发，所以这里显式拼命令行。
 fn is_batch_file(program: &std::path::Path) -> bool {
     matches!(
-        program.extension().and_then(|e| e.to_str()).map(str::to_lowercase).as_deref(),
+        program
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_lowercase)
+            .as_deref(),
         Some("cmd") | Some("bat")
     )
 }
@@ -695,14 +729,15 @@ fn build_cmd_line(program: &std::path::Path, args: &[String]) -> String {
     line
 }
 
-fn build_via_cmd(program: &std::path::Path, args: &[String], work_dir: Option<&std::path::Path>) -> Command {
+fn build_via_cmd(
+    program: &std::path::Path,
+    args: &[String],
+    work_dir: Option<&std::path::Path>,
+) -> Command {
     let line = build_cmd_line(program, args);
 
     let mut cmd = Command::new("cmd.exe");
-    cmd.raw_arg("/D")
-        .raw_arg("/S")
-        .raw_arg("/C")
-        .raw_arg(line);
+    cmd.raw_arg("/D").raw_arg("/S").raw_arg("/C").raw_arg(line);
     if let Some(dir) = work_dir {
         cmd.current_dir(dir);
     }
@@ -811,7 +846,9 @@ pub fn build_command(
     if let Some(dir) = work_dir {
         cmd.current_dir(dir);
     }
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
     cmd
 }
 
@@ -847,7 +884,11 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
         return CodexLine::default();
     }
     let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
-        return CodexLine { text: Some(line.to_string()), plain: true, ..CodexLine::default() };
+        return CodexLine {
+            text: Some(line.to_string()),
+            plain: true,
+            ..CodexLine::default()
+        };
     };
 
     let mut out = CodexLine::default();
@@ -855,7 +896,10 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
     let item = v.get("item");
     match kind {
         "thread.started" => {
-            out.session_id = v.get("thread_id").and_then(|i| i.as_str()).map(str::to_string);
+            out.session_id = v
+                .get("thread_id")
+                .and_then(|i| i.as_str())
+                .map(str::to_string);
         }
         "item.completed" | "item.updated" | "item.started" => {
             match item.and_then(|i| i.get("type")).and_then(|t| t.as_str()) {
@@ -892,7 +936,11 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
 /// 把逐行结果拼成完整输出。增量片段不进最终结果，
 /// 保证存下来的 output 和以前完全一致。
 pub fn parse_codex_output(raw: &str) -> CodexOutput {
-    let mut out = CodexOutput { messages: Vec::new(), errors: Vec::new(), session_id: None };
+    let mut out = CodexOutput {
+        messages: Vec::new(),
+        errors: Vec::new(),
+        session_id: None,
+    };
     for line in raw.lines() {
         let parsed = parse_codex_line(line);
         if let Some(id) = parsed.session_id {
@@ -1097,7 +1145,12 @@ pub fn spawn_run<F>(
         Some(ctx) => format!("{ctx}\n\n{}", run_record.prompt),
         None => run_record.prompt.clone(),
     };
-    let mut command = build_command(&working_agent, &effective_prompt, Some(&bin_path), work.as_deref());
+    let mut command = build_command(
+        &working_agent,
+        &effective_prompt,
+        Some(&bin_path),
+        work.as_deref(),
+    );
 
     tauri::async_runtime::spawn(async move {
         let child = match command.spawn() {

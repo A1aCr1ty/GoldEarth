@@ -25,7 +25,10 @@ use super::types::{OrderLevel, Quote};
 
 /// 按下标取数值，越界或空串都当 0
 fn num(fields: &[&str], idx: usize) -> f64 {
-    fields.get(idx).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0)
+    fields
+        .get(idx)
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0)
 }
 
 /// 取下标处的文本
@@ -158,19 +161,49 @@ mod tests {
     fn parses_five_level_order_book() {
         let q = parse_line(SAMPLE).unwrap();
         assert_eq!(q.bids.len(), 5);
-        assert_eq!(q.bids[0], OrderLevel { price: 1278.01, volume: 2.0 });
-        assert_eq!(q.bids[4], OrderLevel { price: 1277.21, volume: 1.0 });
+        assert_eq!(
+            q.bids[0],
+            OrderLevel {
+                price: 1278.01,
+                volume: 2.0
+            }
+        );
+        assert_eq!(
+            q.bids[4],
+            OrderLevel {
+                price: 1277.21,
+                volume: 1.0
+            }
+        );
         assert_eq!(q.asks.len(), 5);
-        assert_eq!(q.asks[0], OrderLevel { price: 1278.91, volume: 6.0 });
-        assert_eq!(q.asks[4], OrderLevel { price: 1279.13, volume: 2.0 });
+        assert_eq!(
+            q.asks[0],
+            OrderLevel {
+                price: 1278.91,
+                volume: 6.0
+            }
+        );
+        assert_eq!(
+            q.asks[4],
+            OrderLevel {
+                price: 1279.13,
+                volume: 2.0
+            }
+        );
     }
 
     #[test]
     fn cross_checks_against_derived_values() {
         // 用接口自己给的涨跌额和昨收反推现价，验证字段没串位
         let q = parse_line(SAMPLE).unwrap();
-        assert!((q.price - (q.prev_close + q.change)).abs() < 0.02, "现价应等于昨收+涨跌");
-        assert!((q.change_pct - q.change / q.prev_close * 100.0).abs() < 0.02, "涨跌幅应自洽");
+        assert!(
+            (q.price - (q.prev_close + q.change)).abs() < 0.02,
+            "现价应等于昨收+涨跌"
+        );
+        assert!(
+            (q.change_pct - q.change / q.prev_close * 100.0).abs() < 0.02,
+            "涨跌幅应自洽"
+        );
         assert!(
             (q.amplitude - (q.high - q.low) / q.prev_close * 100.0).abs() < 0.05,
             "振幅应自洽"
@@ -192,6 +225,9 @@ mod tests {
     fn rejects_garbage_line() {
         assert!(parse_line("v_sh600519=\"行情异常\"").is_none());
         assert!(parse_line("").is_none());
-        assert!(parse_line("v_sh600519=\"1~2~3\";").is_none(), "字段太少应拒绝");
+        assert!(
+            parse_line("v_sh600519=\"1~2~3\";").is_none(),
+            "字段太少应拒绝"
+        );
     }
 }

@@ -1,10 +1,12 @@
 use serde::Deserialize;
 use tauri::State;
 
+use crate::db::{models::Category, now_iso};
 use crate::AppState;
-use crate::db::{now_iso, models::Category};
 
-fn state_err<E: std::fmt::Display>(e: E) -> String { e.to_string() }
+fn state_err<E: std::fmt::Display>(e: E) -> String {
+    e.to_string()
+}
 
 #[tauri::command]
 pub fn list_categories(state: State<'_, AppState>) -> Result<Vec<Category>, String> {
@@ -21,7 +23,10 @@ pub struct CategoryInput {
 }
 
 #[tauri::command]
-pub fn create_category(state: State<'_, AppState>, input: CategoryInput) -> Result<Category, String> {
+pub fn create_category(
+    state: State<'_, AppState>,
+    input: CategoryInput,
+) -> Result<Category, String> {
     let now = now_iso();
     let cat = Category {
         id: uuid::Uuid::new_v4().to_string(),
@@ -35,8 +40,15 @@ pub fn create_category(state: State<'_, AppState>, input: CategoryInput) -> Resu
 }
 
 #[tauri::command]
-pub fn update_category(state: State<'_, AppState>, id: String, input: CategoryInput) -> Result<Category, String> {
-    state.storage.update_category(&id, Some(input.name), input.icon, input.description).map_err(state_err)
+pub fn update_category(
+    state: State<'_, AppState>,
+    id: String,
+    input: CategoryInput,
+) -> Result<Category, String> {
+    state
+        .storage
+        .update_category(&id, Some(input.name), input.icon, input.description)
+        .map_err(state_err)
 }
 
 #[tauri::command]

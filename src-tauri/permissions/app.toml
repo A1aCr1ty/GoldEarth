@@ -1,0 +1,83 @@
+# 应用自己的命令权限。
+#
+# 一旦 build.rs 里配了 app_manifest，App 就有了 ACL 清单，
+# 而 Tauri 的规则是「有清单就一律走 ACL」（tauri/src/webview/mod.rs:2080），
+# 所以每个命令都必须在这里显式声明 —— 少写一个，界面上就是
+# 「xxx not allowed. Command not found」。
+#
+# 名单由 src/lib.rs 的 generate_handler! 生成，别手改；
+# 加了新命令记得两边都补。
+
+[[permission]]
+identifier = "allow-app-commands"
+description = "App 自己的全部命令，供主窗口使用。"
+commands.allow = [
+  "add_price_target",
+  "available_indices",
+  "cancel_agent_run",
+  "change_storage_location",
+  "create_agent",
+  "create_category",
+  "create_library_category",
+  "create_note",
+  "delete_agent",
+  "delete_category",
+  "delete_library_category",
+  "delete_library_file",
+  "delete_note",
+  "fetch_xianyu_price",
+  "get_library_agent_session",
+  "get_library_dir",
+  "get_note",
+  "get_note_agent_session",
+  "get_note_file_path",
+  "get_settings",
+  "get_stock_agent_session",
+  "get_storage_info",
+  "get_watchlist",
+  "horoscope_today",
+  "import_library_files",
+  "import_notes_to_library",
+  "library_category_path",
+  "list_agent_runs",
+  "list_agents",
+  "list_categories",
+  "list_library_categories",
+  "list_library_files",
+  "list_library_runs",
+  "list_note_runs",
+  "list_notes",
+  "list_price_samples",
+  "list_price_targets",
+  "list_stock_runs",
+  "market_indices",
+  "market_rankings",
+  "open_reader",
+  "open_storage_folder",
+  "ping",
+  "price_overview",
+  "price_trend",
+  "read_library_text",
+  "remove_price_target",
+  "run_agent",
+  "save_watchlist",
+  "search_cities",
+  "seed_watchlist",
+  "set_library_category_agent",
+  "show_xianyu_window",
+  "stock_fund_flow",
+  "stock_kline",
+  "stock_quote",
+  "stock_quotes",
+  "stock_trends",
+  "trending_board",
+  "trending_boards",
+  "trending_kinds",
+  "trending_sources",
+  "update_agent",
+  "update_category",
+  "update_library_category",
+  "update_note",
+  "update_settings",
+  "weather_report",
+]

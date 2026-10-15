@@ -70,7 +70,11 @@ pub async fn stock_quote(code: String) -> Result<Quote, String> {
 
 /// 历史 K 线
 #[tauri::command]
-pub async fn stock_kline(code: String, period: String, limit: Option<usize>) -> Result<Vec<market::types::Candle>, String> {
+pub async fn stock_kline(
+    code: String,
+    period: String,
+    limit: Option<usize>,
+) -> Result<Vec<market::types::Candle>, String> {
     let p = Period::parse(&period).ok_or_else(|| format!("未知的 K 线周期：{period}"))?;
     market::kline(&code, p, limit.unwrap_or(500)).await
 }
@@ -160,7 +164,10 @@ pub fn get_watchlist(state: State<'_, AppState>) -> Result<Vec<WatchItem>, Strin
 
 /// 覆盖保存自选股
 #[tauri::command]
-pub fn save_watchlist(state: State<'_, AppState>, items: Vec<WatchItem>) -> Result<Vec<WatchItem>, String> {
+pub fn save_watchlist(
+    state: State<'_, AppState>,
+    items: Vec<WatchItem>,
+) -> Result<Vec<WatchItem>, String> {
     write_watch_list(&state, items)
 }
 
@@ -169,7 +176,10 @@ pub fn save_watchlist(state: State<'_, AppState>, items: Vec<WatchItem>) -> Resu
 /// 只在从没初始化过的时候铺：用户把自选删空是明确意图，
 /// 之后（哪怕列表是空的）都不再自动塞回去，否则删了又会自己冒出来。
 #[tauri::command]
-pub fn seed_watchlist(state: State<'_, AppState>, items: Vec<WatchItem>) -> Result<Vec<WatchItem>, String> {
+pub fn seed_watchlist(
+    state: State<'_, AppState>,
+    items: Vec<WatchItem>,
+) -> Result<Vec<WatchItem>, String> {
     if state.storage.settings().watchlist_seeded {
         return Ok(state.storage.list_watchlist());
     }
@@ -189,12 +199,28 @@ mod tests {
     #[test]
     fn normalize_watch_list_cleans_and_keeps_order() {
         let items = vec![
-            WatchItem { code: "sh600519".into(), name: "贵州茅台".into(), group: "".into() },
+            WatchItem {
+                code: "sh600519".into(),
+                name: "贵州茅台".into(),
+                group: "".into(),
+            },
             // 同一个代码换种写法：应当被去重，且保留第一次出现的位置
-            WatchItem { code: "SH600519".into(), name: "重复".into(), group: "".into() },
+            WatchItem {
+                code: "SH600519".into(),
+                name: "重复".into(),
+                group: "".into(),
+            },
             // 裸代码要补上交易所前缀
-            WatchItem { code: "000001".into(), name: "平安银行".into(), group: "".into() },
-            WatchItem { code: "   ".into(), name: "空代码".into(), group: "".into() },
+            WatchItem {
+                code: "000001".into(),
+                name: "平安银行".into(),
+                group: "".into(),
+            },
+            WatchItem {
+                code: "   ".into(),
+                name: "空代码".into(),
+                group: "".into(),
+            },
         ];
         let cleaned = normalize_watch_list(items);
         let codes: Vec<&str> = cleaned.iter().map(|w| w.code.as_str()).collect();
@@ -205,7 +231,11 @@ mod tests {
     #[test]
     fn normalize_watch_list_caps_the_list() {
         let items = (0..WATCHLIST_MAX + 50)
-            .map(|i| WatchItem { code: format!("sh{:06}", i), name: String::new(), group: String::new() })
+            .map(|i| WatchItem {
+                code: format!("sh{:06}", i),
+                name: String::new(),
+                group: String::new(),
+            })
             .collect();
         assert_eq!(normalize_watch_list(items).len(), WATCHLIST_MAX);
     }

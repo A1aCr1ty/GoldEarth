@@ -46,15 +46,18 @@ export default function ExplorePage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
-        <div className="min-w-0">
-          <h1 className="text-base font-semibold">网上冲浪</h1>
+      {/* 头部原来写死 h-14 + 右侧 shrink-0：窗口一窄，右边的按钮组
+          会被整页的 overflow-hidden 直接切掉。这里改成 min-h + 换行，
+          窄窗口时按钮换到第二行，而不是被裁掉半个。 */}
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b px-4 py-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-semibold">网上冲浪</h1>
           <p className="text-[0.6875rem] text-muted-foreground">
             聚合热榜 · 点条目跳原文
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
           {/* B 站口径切换 */}
           {s.kinds.length > 0 && (
             <>
@@ -138,7 +141,9 @@ export default function ExplorePage() {
             <p className="text-xs">点上面的标签把平台加回来</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+          // 列数跟着可用宽度自己变：auto-fit + minmax，
+          // 窗口拉宽就多排几列，不用去改 lg / 2xl 那两个断点
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] items-start gap-3">
             {s.active.map((key) => {
               const board = s.boards[key];
               const source = s.sources.find((x) => x.value === key);

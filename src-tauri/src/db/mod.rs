@@ -1,5 +1,6 @@
 pub mod library;
 pub mod models;
+pub mod prices;
 pub mod vault;
 
 use std::fs;
@@ -11,14 +12,23 @@ use serde::{de::DeserializeOwned, Serialize};
 use tauri::{AppHandle, Manager};
 
 use library::Library;
-use models::{Agent, AgentRun, AppSettings, AppSettingsPatch, Category, Note};
+use models::{
+    Agent, AgentRun, AppSettings, AppSettingsPatch, Category, Note, PriceOverview, PriceSample,
+    PriceTarget,
+};
 use vault::{Vault, UNASSIGNED};
 
 const DATA_DIR: &str = "data";
+const STORAGE_LOCATION_FILE: &str = "storage_location.json";
 const AGENTS_FILE: &str = "agents.json";
 const RUNS_FILE: &str = "agent_runs.json";
 const SETTINGS_FILE: &str = "settings.json";
 const WATCHLIST_FILE: &str = "watchlist.json";
+const PRICE_TARGETS_FILE: &str = "price_targets.json";
+const PRICE_SAMPLES_FILE: &str = "price_samples.json";
+/// 闲鱼最近一次的原始响应。抓价链路的响应结构还没被验证过，
+/// 先留个档，等跑通了对着它把解析收窄
+const XIANYU_RAW_FILE: &str = "xianyu_last_response.json";
 const LEGACY_CATEGORIES_FILE: &str = "categories.json";
 const LEGACY_NOTES_FILE: &str = "notes.json";
 const MAX_RUN_HISTORY: usize = 200;
@@ -36,6 +46,10 @@ pub enum StorageError {
     Tauri(#[from] tauri::Error),
     #[error("not found: {0}")]
     NotFound(String),
+    /// 用户填的东西不合理（空名字、离谱的价格等）。单独一类，
+    /// 是为了让报错原样透到界面上，别被套成 "not found: xxx"
+    #[error("{0}")]
+    Invalid(String),
     #[error("{CONFLICT_PREFIX}: {0}")]
     Conflict(String),
 }
@@ -46,10 +60,15 @@ pub type Result<T> = std::result::Result<T, StorageError>;
 struct Collections {
     agents: Arc<Mutex<Vec<Agent>>>,
     runs: Arc<Mutex<Vec<AgentRun>>>,
+    /// 首页「价格追踪」盯着的物品
+    price_targets: Arc<Mutex<Vec<PriceTarget>>>,
+    /// 每个物品记过的价格（存的是均价，不是单条在售价）
+    price_samples: Arc<Mutex<Vec<PriceSample>>>,
 }
 
 pub struct Storage {
     root: PathBuf,
+    bootstrap_root: PathBuf,
     data_dir: PathBuf,
     vault: Vault,
     library: Library,
@@ -59,21 +78,35 @@ pub struct Storage {
 
 impl Storage {
     pub fn new(app: &AppHandle) -> Result<Self> {
-        let root = app
+        let bootstrap_root = app
             .path()
             .app_data_dir()
             .map_err(|e| StorageError::NotFound(e.to_string()))?;
+        let marker = bootstrap_root.join(STORAGE_LOCATION_FILE);
+        let root = if marker.exists() {
+            let selected: StorageLocation = serde_json::from_slice(&fs::read(&marker)?)?;
+            let path = PathBuf::from(selected.root);
+            if !path.is_absolute() {
+                return Err(StorageError::Invalid("本地存储位置必须是绝对路径".into()));
+            }
+            path
+        } else {
+            bootstrap_root.clone()
+        };
         let data_dir = root.join(DATA_DIR);
         let vault = Vault::new(&root);
         let library = Library::new(&root);
         Ok(Self {
             root,
+            bootstrap_root,
             data_dir,
             vault,
             library,
             cols: Collections {
                 agents: Arc::new(Mutex::new(Vec::new())),
                 runs: Arc::new(Mutex::new(Vec::new())),
+                price_targets: Arc::new(Mutex::new(Vec::new())),
+                price_samples: Arc::new(Mutex::new(Vec::new())),
             },
             settings: Arc::new(Mutex::new(AppSettings::default())),
         })
@@ -86,12 +119,55 @@ impl Storage {
         self.migrate_legacy()?;
         self.load_into(&self.data_dir.join(AGENTS_FILE), &self.cols.agents)?;
         self.load_into(&self.data_dir.join(RUNS_FILE), &self.cols.runs)?;
+        self.load_into(
+            &self.data_dir.join(PRICE_TARGETS_FILE),
+            &self.cols.price_targets,
+        )?;
+        self.load_into(
+            &self.data_dir.join(PRICE_SAMPLES_FILE),
+            &self.cols.price_samples,
+        )?;
         self.load_settings()?;
         Ok(())
     }
 
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// 将当前存储完整复制到一个空目录，再写启动位置标记。旧目录保留作备份。
+    pub fn change_root(&self, destination: &Path) -> Result<()> {
+        let destination = destination
+            .canonicalize()
+            .map_err(|e| StorageError::Invalid(format!("无法访问目标文件夹：{e}")))?;
+        let source = self.root.canonicalize()?;
+        if destination == source
+            || destination.starts_with(&source)
+            || source.starts_with(&destination)
+        {
+            return Err(StorageError::Invalid(
+                "新位置不能与当前存储目录相同，也不能互相包含".into(),
+            ));
+        }
+        if fs::read_dir(&destination)?.next().is_some() {
+            return Err(StorageError::Invalid(
+                "请选择一个空文件夹，避免覆盖已有文件".into(),
+            ));
+        }
+        copy_storage_tree(&source, &destination)?;
+        fs::create_dir_all(&self.bootstrap_root)?;
+        let marker = self.bootstrap_root.join(STORAGE_LOCATION_FILE);
+        let temporary = self
+            .bootstrap_root
+            .join(format!("{STORAGE_LOCATION_FILE}.tmp"));
+        fs::write(
+            &temporary,
+            serde_json::to_vec_pretty(&StorageLocation {
+                root: destination.to_string_lossy().into_owned(),
+            })?,
+        )?;
+        fs::rename(temporary, marker)?;
+        Ok(())
     }
 
     pub fn vault_root(&self) -> &Path {
@@ -164,44 +240,7 @@ impl Storage {
 
     /// 只改传进来的字段，其余保持原值；返回更新后的完整设置。
     pub fn update_settings(&self, patch: AppSettingsPatch) -> Result<AppSettings> {
-        let mut next = self.settings();
-        if let Some(v) = patch.agent_bin_path {
-            next.agent_bin_path = v.trim().to_string();
-        }
-        if let Some(codes) = patch.index_codes {
-            // 指数代码去重并规范化，用户手滑传了 "SH600000" 也能存成标准形式
-            let mut out: Vec<String> = Vec::new();
-            for c in codes {
-                let n = crate::market::symbol::normalize(&c);
-                if !n.is_empty() && !out.contains(&n) {
-                    out.push(n);
-                }
-            }
-            next.index_codes = out;
-        }
-        if let Some(v) = patch.weather_city {
-            next.weather_city = v.trim().to_string();
-        }
-        if let Some(v) = patch.watchlist_seeded {
-            next.watchlist_seeded = v;
-        }
-        if let Some(v) = patch.theme {
-            next.theme = v;
-        }
-        if let Some(v) = patch.accent {
-            next.accent = v;
-        }
-        if let Some(v) = patch.font {
-            next.font = v;
-        }
-        if let Some(v) = patch.font_scale {
-            next.font_scale = v;
-        }
-        if let Some(v) = patch.birth_date {
-            next.birth_date = v;
-        }
-        // 外观字段按白名单收紧后再落盘，保证文件里永远是合法值
-        let next = next.normalized();
+        let next = apply_settings_patch(&self.settings(), patch);
         *self.settings.lock() = next.clone();
         let path = self.data_dir.join(SETTINGS_FILE);
         fs::write(&path, serde_json::to_string_pretty(&next)?)?;
@@ -301,12 +340,12 @@ impl Storage {
         for mut n in notes {
             n.category_id = None;
             n.updated_at = now_iso();
-            if let Some(p) = self.vault.path_of(&n.id) {
-                let _ = fs::remove_file(p);
-            }
-            let _ = self.vault.write(&n, UNASSIGNED);
+            let _ = self.vault.write_replacing(&n, UNASSIGNED);
         }
-        let dir = self.vault.root().join(vault::sanitize_dir_name(&removed.name));
+        let dir = self
+            .vault
+            .root()
+            .join(vault::sanitize_dir_name(&removed.name));
         let _ = fs::remove_dir(dir);
         Ok(())
     }
@@ -324,7 +363,7 @@ impl Storage {
 
     pub fn insert_note(&self, n: Note) -> Result<Note> {
         let dir = self.dir_name_for(n.category_id.as_deref());
-        self.vault.write(&n, &dir)?;
+        self.vault.write_replacing(&n, &dir)?;
         self.vault
             .find(&n.id)
             .ok_or_else(|| StorageError::NotFound(format!("note {}", n.id)))
@@ -353,7 +392,6 @@ impl Storage {
             }
         }
 
-        let old_dir = self.dir_name_for(current.category_id.as_deref());
         let mut next = current.clone();
         if let Some(c) = category_id {
             next.category_id = c;
@@ -374,21 +412,154 @@ impl Storage {
         next.modified = String::new();
 
         let new_dir = self.dir_name_for(next.category_id.as_deref());
-        self.vault.write(&next, &new_dir)?;
-        // 改名或换分类后旧文件要清掉，否则会留下重复副本
-        if old_dir != new_dir || next.title != current.title {
-            if let Some(p) = self.vault.path_of(&current.id) {
-                let expected_new = self.vault.path_of(&next.id);
-                if expected_new.as_deref() != Some(p.as_path()) {
-                    let _ = fs::remove_file(p);
-                }
-            }
-        }
+        // 写新文件并清掉改名/换分类前的旧文件。先写后删，中途出错也不会丢内容。
+        self.vault.write_replacing(&next, &new_dir)?;
         self.get_note(id)
     }
 
     pub fn delete_note(&self, id: &str) -> Result<()> {
         self.vault.delete(id).map_err(StorageError::Io)
+    }
+
+    // ===== 价格追踪 =====
+
+    pub fn list_price_targets(&self) -> Vec<PriceTarget> {
+        self.cols.price_targets.lock().clone()
+    }
+
+    pub fn add_price_target(
+        &self,
+        name: String,
+        keyword: String,
+        note: String,
+    ) -> Result<PriceTarget> {
+        let trimmed = name.trim().to_string();
+        if trimmed.is_empty() {
+            return Err(StorageError::Invalid("物品名不能为空".into()));
+        }
+        let target = PriceTarget {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: trimmed,
+            keyword: keyword.trim().to_string(),
+            note: note.trim().to_string(),
+            created_at: now_iso(),
+        };
+        self.cols.price_targets.lock().push(target.clone());
+        self.save(
+            &self.data_dir.join(PRICE_TARGETS_FILE),
+            &self.cols.price_targets.lock(),
+        )?;
+        Ok(target)
+    }
+
+    /// 删物品时连它的价格记录一起删：留着就成了没人认领的孤儿行，
+    /// 既看不见也删不掉，文件还一直变大。
+    pub fn remove_price_target(&self, id: &str) -> Result<()> {
+        self.cols.price_targets.lock().retain(|t| t.id != id);
+        self.cols.price_samples.lock().retain(|s| s.target_id != id);
+        self.save(
+            &self.data_dir.join(PRICE_TARGETS_FILE),
+            &self.cols.price_targets.lock(),
+        )?;
+        self.save(
+            &self.data_dir.join(PRICE_SAMPLES_FILE),
+            &self.cols.price_samples.lock(),
+        )?;
+        Ok(())
+    }
+
+    /// 某个物品记过的价格，最新的在前
+    pub fn list_price_samples(&self, target_id: &str) -> Vec<PriceSample> {
+        let mut rows: Vec<PriceSample> = self
+            .cols
+            .price_samples
+            .lock()
+            .iter()
+            .filter(|s| s.target_id == target_id)
+            .cloned()
+            .collect();
+        rows.sort_by(|a, b| b.recorded_at.cmp(&a.recorded_at));
+        rows
+    }
+
+    /// 记一笔均价。`samples` 是这个均价背后统计了几条在售，
+    /// 手动记的按 1 算，不然图上「样本 0 条」看着像没抓到东西。
+    pub fn add_price_sample(
+        &self,
+        target_id: &str,
+        price: f64,
+        source: &str,
+        samples: u32,
+    ) -> Result<PriceSample> {
+        if !self
+            .cols
+            .price_targets
+            .lock()
+            .iter()
+            .any(|t| t.id == target_id)
+        {
+            return Err(StorageError::NotFound(format!("price target {target_id}")));
+        }
+        let price = prices::validate_price(price).map_err(StorageError::Invalid)?;
+        let row = PriceSample {
+            id: uuid::Uuid::new_v4().to_string(),
+            target_id: target_id.to_string(),
+            price,
+            source: if source.trim().is_empty() {
+                "manual".into()
+            } else {
+                source.trim().to_string()
+            },
+            samples: samples.max(1),
+            recorded_at: now_iso(),
+        };
+        // 最新的放最前面，和 list_price_samples 的排序对得上
+        self.cols.price_samples.lock().insert(0, row.clone());
+        self.save(
+            &self.data_dir.join(PRICE_SAMPLES_FILE),
+            &self.cols.price_samples.lock(),
+        )?;
+        Ok(row)
+    }
+
+    /// 画趋势线的数据，按天聚合；days <= 0 表示不限
+    pub fn price_trend(&self, target_id: &str, days: i64) -> Vec<models::TrendPoint> {
+        prices::build_trend(&self.list_price_samples(target_id), days)
+    }
+
+    /// 首页那张卡：每个物品一行
+    pub fn price_overview(&self, spark_days: usize) -> Vec<PriceOverview> {
+        let targets = self.list_price_targets();
+        let samples = self.cols.price_samples.lock();
+        targets
+            .iter()
+            .map(|t| {
+                let mine: Vec<PriceSample> = samples
+                    .iter()
+                    .filter(|s| s.target_id == t.id)
+                    .cloned()
+                    .collect();
+                prices::build_overview(t, &mine, spark_days)
+            })
+            .collect()
+    }
+
+    /// 把闲鱼那次的原始响应落到 `data/xianyu_last_response.json`。
+    ///
+    /// 这份 JSON 的结构至今没被验证过（Rust 直连拿不到，浏览器那边拿不到响应体），
+    /// 所以先把原文存下来：等第一次真跑通，就能对着真实结构把
+    /// `xianyu_webview::extract_prices` 的宽口径收窄，并把测试换成实抓样本。
+    ///
+    /// 写失败只打日志：存个调试文件不该让整次抓价跟着失败。
+    pub fn dump_xianyu_response(&self, raw: &str) -> Result<()> {
+        if raw.trim().is_empty() {
+            return Ok(());
+        }
+        let path = self.data_dir.join(XIANYU_RAW_FILE);
+        if let Err(e) = fs::write(&path, raw) {
+            eprintln!("[xianyu] 存原始响应失败 {}：{e}", path.display());
+        }
+        Ok(())
     }
 
     // ===== agents =====
@@ -409,15 +580,39 @@ impl Storage {
         self.save(&self.data_dir.join(AGENTS_FILE), &self.cols.agents.lock())?;
         Ok(a)
     }
-    pub fn update_agent(&self, id: &str, name: Option<String>, kind: Option<models::AgentKind>, command: Option<String>, args: Option<Vec<String>>, description: Option<String>, enabled: Option<bool>) -> Result<Agent> {
+    pub fn update_agent(
+        &self,
+        id: &str,
+        name: Option<String>,
+        kind: Option<models::AgentKind>,
+        command: Option<String>,
+        args: Option<Vec<String>>,
+        description: Option<String>,
+        enabled: Option<bool>,
+    ) -> Result<Agent> {
         let mut g = self.cols.agents.lock();
-        let item = g.iter_mut().find(|a| a.id == id).ok_or_else(|| StorageError::NotFound(format!("agent {id}")))?;
-        if let Some(n) = name { item.name = n; }
-        if let Some(k) = kind { item.kind = k; }
-        if let Some(c) = command { item.command = c; }
-        if let Some(a) = args { item.args = a; }
-        if let Some(d) = description { item.description = Some(d); }
-        if let Some(e) = enabled { item.enabled = e; }
+        let item = g
+            .iter_mut()
+            .find(|a| a.id == id)
+            .ok_or_else(|| StorageError::NotFound(format!("agent {id}")))?;
+        if let Some(n) = name {
+            item.name = n;
+        }
+        if let Some(k) = kind {
+            item.kind = k;
+        }
+        if let Some(c) = command {
+            item.command = c;
+        }
+        if let Some(a) = args {
+            item.args = a;
+        }
+        if let Some(d) = description {
+            item.description = Some(d);
+        }
+        if let Some(e) = enabled {
+            item.enabled = e;
+        }
         let cloned = item.clone();
         drop(g);
         self.save(&self.data_dir.join(AGENTS_FILE), &self.cols.agents.lock())?;
@@ -507,10 +702,7 @@ impl Storage {
         read_json_or(&path, Vec::new())
     }
 
-    pub fn save_watchlist(
-        &self,
-        items: &[crate::commands::market::WatchItem],
-    ) -> Result<()> {
+    pub fn save_watchlist(&self, items: &[crate::commands::market::WatchItem]) -> Result<()> {
         let path = self.data_dir.join(WATCHLIST_FILE);
         self.save(&path, &items)
     }
@@ -525,6 +717,35 @@ impl Storage {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct StorageLocation {
+    root: String,
+}
+
+fn copy_storage_tree(source: &Path, destination: &Path) -> std::io::Result<()> {
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        if entry.file_name() == STORAGE_LOCATION_FILE {
+            continue;
+        }
+        let metadata = fs::symlink_metadata(entry.path())?;
+        if metadata.file_type().is_symlink() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "存储目录包含符号链接，无法安全迁移",
+            ));
+        }
+        let target = destination.join(entry.file_name());
+        if metadata.is_dir() {
+            fs::create_dir(&target)?;
+            copy_storage_tree(&entry.path(), &target)?;
+        } else if metadata.is_file() {
+            fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
 fn read_json_or<T: DeserializeOwned>(path: &Path, fallback: T) -> T {
     fs::read_to_string(path)
         .ok()
@@ -534,4 +755,195 @@ fn read_json_or<T: DeserializeOwned>(path: &Path, fallback: T) -> T {
 
 pub fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339()
+}
+
+/// 把补丁套到当前设置上，返回规范化之后的新值。
+///
+/// 刻意抽成纯函数：`Storage` 构造要 Tauri 句柄，测不了，
+/// 于是以前这段逻辑直接写在 `update_settings` 里，加字段时漏掉一句
+/// 编译期发现不了，现象是「界面提示保存成功、配置却什么都没变」。
+/// ——冲浪页的雪球 / 小红书 Cookie 就是这么丢过一次的。
+pub fn apply_settings_patch(base: &AppSettings, patch: AppSettingsPatch) -> AppSettings {
+    let mut next = base.clone();
+    if let Some(v) = patch.agent_bin_path {
+        next.agent_bin_path = v.trim().to_string();
+    }
+    if let Some(codes) = patch.index_codes {
+        // 指数代码去重并规范化，用户手滑传了 "SH600000" 也能存成标准形式
+        let mut out: Vec<String> = Vec::new();
+        for c in codes {
+            let n = crate::market::symbol::normalize(&c);
+            if !n.is_empty() && !out.contains(&n) {
+                out.push(n);
+            }
+        }
+        next.index_codes = out;
+    }
+    if let Some(v) = patch.weather_city {
+        next.weather_city = v.trim().to_string();
+    }
+    if let Some(v) = patch.watchlist_seeded {
+        next.watchlist_seeded = v;
+    }
+    if let Some(v) = patch.theme {
+        next.theme = v;
+    }
+    if let Some(v) = patch.accent {
+        next.accent = v;
+    }
+    if let Some(v) = patch.font {
+        next.font = v;
+    }
+    if let Some(v) = patch.font_scale {
+        next.font_scale = v;
+    }
+    if let Some(v) = patch.birth_date {
+        next.birth_date = v;
+    }
+    // 冲浪页两个平台的登录 Cookie。这里必须显式接住：漏掉的话 Cookie
+    // 会被静默丢掉，卡片永远停在「需要 Cookie」，存了等于没存。
+    // 首尾空白交给 normalized() 统一收拾（浏览器复制常带换行）。
+    if let Some(v) = patch.xueqiu_cookie {
+        next.xueqiu_cookie = v;
+    }
+    if let Some(v) = patch.xiaohongshu_cookie {
+        next.xiaohongshu_cookie = v;
+    }
+    // 闲鱼 Cookie：先存着备用，抓价目前走 WebView2，读不到这里
+    if let Some(v) = patch.xianyu_cookie {
+        next.xianyu_cookie = v;
+    }
+    // 勾选列表原样收下，空数组要能传得进去；
+    // 不认识的值由 normalized() 按平台清单收紧
+    if let Some(v) = patch.explore_sources {
+        next.explore_sources = Some(v);
+    }
+    if let Some(v) = patch.explore_auto_refresh {
+        next.explore_auto_refresh = Some(v);
+    }
+    // 外观等字段按白名单收紧后再落盘，保证文件里永远是合法值
+    next.normalized()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 一份「每个字段都给值」的补丁。
+    ///
+    /// 这里刻意**不写** `..Default::default()`：给 `AppSettingsPatch` 加新字段时，
+    /// 这个结构体字面量会直接编译不过，逼着同时补上 `apply_settings_patch` 里的
+    /// 一行和下面的一条断言。以前正是缺这层守卫，雪球 / 小红书 Cookie 加了字段
+    /// 却忘了接住，界面上「保存成功」但 Cookie 从来没存下来过。
+    fn full_patch() -> AppSettingsPatch {
+        AppSettingsPatch {
+            agent_bin_path: Some("C:/tools/codex.cmd".into()),
+            index_codes: Some(vec!["SH600000".into(), "600000".into()]),
+            weather_city: Some("  上海 ".into()),
+            watchlist_seeded: Some(true),
+            theme: Some("dark".into()),
+            accent: Some("teal".into()),
+            font: Some("serif".into()),
+            font_scale: Some(1.2),
+            birth_date: Some("1990-05-06".into()),
+            xueqiu_cookie: Some("xq_a_token=abc123".into()),
+            xiaohongshu_cookie: Some("web_session=xyz789".into()),
+            xianyu_cookie: Some("cookie2=xy001".into()),
+            explore_sources: Some(vec!["weibo".into(), "douyin".into()]),
+            explore_auto_refresh: Some(false),
+        }
+    }
+
+    #[test]
+    fn every_patch_field_actually_lands() {
+        let next = apply_settings_patch(&AppSettings::default(), full_patch());
+
+        assert_eq!(next.agent_bin_path, "C:/tools/codex.cmd");
+        assert_eq!(
+            next.index_codes,
+            vec!["sh600000".to_string()],
+            "要去重并规范化"
+        );
+        assert_eq!(next.weather_city, "上海", "首尾空格要收掉");
+        assert!(next.watchlist_seeded);
+        assert_eq!(next.theme, "dark");
+        assert_eq!(next.accent, "teal");
+        assert_eq!(next.font, "serif");
+        assert_eq!(next.font_scale, 1.2);
+        assert_eq!(next.birth_date, "1990-05-06");
+        assert_eq!(
+            next.explore_sources,
+            Some(vec!["weibo".to_string()]),
+            "不认识的平台要丢掉"
+        );
+        assert_eq!(next.explore_auto_refresh, Some(false));
+    }
+
+    #[test]
+    fn trending_cookies_are_saved_and_trimmed() {
+        let next = apply_settings_patch(&AppSettings::default(), full_patch());
+        assert_eq!(
+            next.xueqiu_cookie, "xq_a_token=abc123",
+            "雪球 Cookie 必须真的存下来，否则卡片永远停在「需要 Cookie」"
+        );
+        assert_eq!(next.xiaohongshu_cookie, "web_session=xyz789");
+        assert_eq!(
+            next.xianyu_cookie, "cookie2=xy001",
+            "闲鱼 Cookie 也要真的存下来，否则首页那个「去闲鱼查价」永远只是空按"
+        );
+
+        // 浏览器复制出来的 Cookie 常带换行和空格，落盘前要收拾干净
+        let pasted = apply_settings_patch(
+            &AppSettings::default(),
+            AppSettingsPatch {
+                xueqiu_cookie: Some("  xq_a_token=abc\n".into()),
+                ..AppSettingsPatch::default()
+            },
+        );
+        assert_eq!(pasted.xueqiu_cookie, "xq_a_token=abc");
+        assert!(!pasted.xueqiu_cookie.contains('\n'));
+    }
+
+    #[test]
+    fn cookie_round_trips_through_the_settings_file_shape() {
+        // 前端实际发的是 camelCase，这条路径不能断
+        let patch: AppSettingsPatch =
+            serde_json::from_str(r#"{"xueqiuCookie":"xq_a_token=abc"}"#).unwrap();
+        let next = apply_settings_patch(&AppSettings::default(), patch);
+        assert_eq!(next.xueqiu_cookie, "xq_a_token=abc");
+
+        let v = serde_json::to_value(&next).unwrap();
+        assert_eq!(v["xueqiuCookie"], "xq_a_token=abc");
+    }
+
+    #[test]
+    fn absent_fields_keep_their_previous_value() {
+        let base = apply_settings_patch(&AppSettings::default(), full_patch());
+        // 只改城市，其余一个都不该动
+        let next = apply_settings_patch(
+            &base,
+            AppSettingsPatch {
+                weather_city: Some("北京".into()),
+                ..AppSettingsPatch::default()
+            },
+        );
+        assert_eq!(next.weather_city, "北京");
+        assert_eq!(next.xueqiu_cookie, base.xueqiu_cookie);
+        assert_eq!(next.theme, base.theme);
+        assert_eq!(next.explore_sources, base.explore_sources);
+    }
+
+    #[test]
+    fn clearing_a_cookie_takes_effect() {
+        let base = apply_settings_patch(&AppSettings::default(), full_patch());
+        let next = apply_settings_patch(
+            &base,
+            AppSettingsPatch {
+                xueqiu_cookie: Some(String::new()),
+                ..AppSettingsPatch::default()
+            },
+        );
+        assert!(next.xueqiu_cookie.is_empty(), "清空要真的清空");
+        assert_eq!(next.xiaohongshu_cookie, base.xiaohongshu_cookie);
+    }
 }

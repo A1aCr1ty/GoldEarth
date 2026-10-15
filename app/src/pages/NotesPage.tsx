@@ -129,10 +129,15 @@ export default function NotesPage() {
   }, [format]);
   return (
     <div className="flex h-full">
-      <aside className="flex w-72 shrink-0 flex-col border-r">
-        <div className="flex h-14 items-center justify-between border-b px-4">
-          <h2 className="text-sm font-semibold">笔记列表</h2>
-          <Button size="sm" variant="ghost" onClick={handleCreate}><Plus className="h-4 w-4" /> 新建</Button>
+      {/* 三栏都用比例宽度：以前列表 18rem + 对话 23.75rem 是写死的，
+          窗口缩到最小 900px、扣掉侧边栏只剩 676px 时，编辑区被挤到几乎为零。
+          clamp() 让两侧跟着窗口缩，编辑区永远保底 16rem。 */}
+      <aside className="flex w-[clamp(11rem,26%,17rem)] shrink-0 flex-col border-r">
+        <div className="flex h-14 items-center justify-between gap-1 border-b px-4">
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">笔记列表</h2>
+          <Button size="sm" variant="ghost" className="shrink-0 gap-1.5" onClick={handleCreate}>
+            <Plus className="h-4 w-4" /> 新建
+          </Button>
         </div>
         <ScrollArea className="flex-1">
           {items.length === 0 && <p className="p-4 text-xs text-muted-foreground">还没有笔记，点击右上角 “新建”。</p>}
@@ -140,16 +145,17 @@ export default function NotesPage() {
             <button
               key={n.id}
               onClick={() => select(n.id)}
+              title={n.title || "未命名笔记"}
               className={"flex w-full flex-col items-start gap-1 border-b px-4 py-3 text-left text-sm transition-colors hover:bg-accent " + (currentId === n.id ? "bg-accent" : "")}
             >
-              <span className="line-clamp-1 font-medium">{n.title || "未命名笔记"}</span>
-              <span className="line-clamp-1 text-xs text-muted-foreground">{n.content.slice(0, 60) || "空白笔记"}</span>
+              <span className="line-clamp-1 w-full font-medium">{n.title || "未命名笔记"}</span>
+              <span className="line-clamp-2 w-full text-xs text-muted-foreground">{n.content.slice(0, 60) || "空白笔记"}</span>
               <span className="text-[0.625rem] text-muted-foreground">{new Date(n.updatedAt).toLocaleString()}</span>
             </button>
           ))}
         </ScrollArea>
       </aside>
-      <section className="flex min-h-0 flex-1 flex-col">
+      <section className="flex min-h-0 min-w-[16rem] flex-1 flex-col">
         {!note ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">从左侧选择或新建一条笔记。</div>
         ) : (
@@ -206,7 +212,7 @@ export default function NotesPage() {
         )}
       </section>
       {chatOpen && (
-        <aside className="w-[23.75rem] shrink-0 border-l">
+        <aside className="w-[clamp(11rem,30%,23.75rem)] shrink-0 border-l">
           {note ? (
             <NoteAgentChat note={note} content={content} onFinished={handleAgentFinished} />
           ) : (

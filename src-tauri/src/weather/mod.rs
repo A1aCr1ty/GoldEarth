@@ -287,8 +287,8 @@ async fn fetch_forecast(city: &CityOption) -> Result<serde_json::Value, String> 
 
 /// 把 Open-Meteo 的响应整理成前端要的形状
 fn build_report(city: CityOption, value: &serde_json::Value) -> Result<WeatherReport, String> {
-    let resp: ForecastResponse =
-        serde_json::from_value(value.clone()).map_err(|e| format!("天气数据结构不符合预期：{e}"))?;
+    let resp: ForecastResponse = serde_json::from_value(value.clone())
+        .map_err(|e| format!("天气数据结构不符合预期：{e}"))?;
     let current = resp
         .current
         .ok_or_else(|| "天气数据里没有实时部分".to_string())?;
@@ -311,8 +311,18 @@ fn build_report(city: CityOption, value: &serde_json::Value) -> Result<WeatherRe
         days.push(WeatherDay {
             date: date.clone(),
             code: daily.weather_code.get(i).copied().unwrap_or_default(),
-            max: daily.temperature_2m_max.get(i).copied().flatten().unwrap_or_default(),
-            min: daily.temperature_2m_min.get(i).copied().flatten().unwrap_or_default(),
+            max: daily
+                .temperature_2m_max
+                .get(i)
+                .copied()
+                .flatten()
+                .unwrap_or_default(),
+            min: daily
+                .temperature_2m_min
+                .get(i)
+                .copied()
+                .flatten()
+                .unwrap_or_default(),
             sunrise: hhmm(daily.sunrise.get(i).map(String::as_str).unwrap_or_default()),
             sunset: hhmm(daily.sunset.get(i).map(String::as_str).unwrap_or_default()),
             precipitation_probability: daily
@@ -391,7 +401,10 @@ mod tests {
         assert_eq!(report.days[0].sunrise, "06:12", "日出应裁成 HH:MM");
         assert_eq!(report.days[0].max, 24.0);
         assert_eq!(report.days[1].code, 3);
-        assert_eq!(report.days[1].precipitation_probability, 0.0, "null 应退化成 0");
+        assert_eq!(
+            report.days[1].precipitation_probability, 0.0,
+            "null 应退化成 0"
+        );
     }
 
     #[test]
@@ -426,14 +439,23 @@ mod tests {
         assert_eq!(report.city.name, "北京");
         assert!(report.now.humidity >= 0.0 && report.now.humidity <= 100.0);
         assert_eq!(report.days.len(), 7, "应该拿到 7 天预报");
-        assert!(report.days.iter().all(|d| d.max >= d.min), "最高温不该低于最低温");
         assert!(
-            report.days.iter().all(|d| d.sunrise.len() == 5 && d.sunset.len() == 5),
+            report.days.iter().all(|d| d.max >= d.min),
+            "最高温不该低于最低温"
+        );
+        assert!(
+            report
+                .days
+                .iter()
+                .all(|d| d.sunrise.len() == 5 && d.sunset.len() == 5),
             "日出日落应裁成 HH:MM"
         );
 
         let cities = search_cities("上海", 3).await.expect("上海检索");
-        println!("检索上海 → {:?}", cities.iter().map(|c| &c.name).collect::<Vec<_>>());
+        println!(
+            "检索上海 → {:?}",
+            cities.iter().map(|c| &c.name).collect::<Vec<_>>()
+        );
         assert!(cities.iter().any(|c| c.name == "上海"), "应能检索到上海");
     }
 }

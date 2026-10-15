@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { tauri } from "@/lib/tauri";
+import { open as pickDirectory } from "@tauri-apps/plugin-dialog";
+import { FolderOpen, HardDrive } from "lucide-react";
 interface StorageInfo { root: string; totalNotes: number; totalCategories: number; }
 export default function SettingsPage() {
   const [info, setInfo] = useState<StorageInfo | null>(null);
@@ -13,6 +15,7 @@ export default function SettingsPage() {
   const [binPath, setBinPath] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [saved, setSaved] = useState(false);
+  const [changingStorage, setChangingStorage] = useState(false);
   useEffect(() => {
     tauri.getStorageInfo().then(setInfo).catch((e) => setError(String(e)));
     tauri.getSettings()
@@ -43,6 +46,20 @@ export default function SettingsPage() {
       setError(String(e));
     }
   }
+  async function handleChangeStorageLocation() {
+    if (changingStorage) return;
+    setError(null);
+    try {
+      const selected = await pickDirectory({ directory: true, multiple: false, title: "选择新的本地存储文件夹" });
+      if (!selected || Array.isArray(selected)) return;
+      if (!window.confirm(`将现有数据复制到：\n${selected}\n\n目标文件夹必须为空。复制完成后应用会自动重启；当前存储目录会保留作备份。`)) return;
+      setChangingStorage(true);
+      await tauri.changeStorageLocation(selected);
+    } catch (e) {
+      setError(String(e));
+      setChangingStorage(false);
+    }
+  }
   return (
     <div className="h-full overflow-y-auto p-6">
       <h1 className="mb-4 text-lg font-semibold">设置</h1>
@@ -55,11 +72,20 @@ export default function SettingsPage() {
             <CardTitle>本地存储</CardTitle>
             <CardDescription>所有数据保存在本机，按需备份。</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-3 text-sm">
             {error && <p className="text-destructive">{error}</p>}
             {info && (
               <>
                 <p><span className="text-muted-foreground">存储根目录：</span><code className="ml-1 rounded bg-muted px-1 py-0.5 text-xs">{info.root}</code></p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { void tauri.openStorageFolder().catch((e) => setError(String(e))); }}>
+                    <FolderOpen className="h-4 w-4" /> 打开文件夹
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => void handleChangeStorageLocation()} disabled={changingStorage}>
+                    <HardDrive className="h-4 w-4" /> {changingStorage ? "正在迁移并重启…" : "更改存储位置"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">更改时会复制笔记、知识库和设置到所选空文件夹，原位置保留为备份。</p>
                 <p><span className="text-muted-foreground">分类数：</span><Badge variant="secondary" className="ml-1">{info.totalCategories}</Badge></p>
                 <p><span className="text-muted-foreground">笔记数：</span><Badge variant="secondary" className="ml-1">{info.totalNotes}</Badge></p>
               </>

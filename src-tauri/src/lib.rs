@@ -1,18 +1,21 @@
-mod db;
 mod agents;
 mod commands;
-mod market;
-mod weather;
+mod db;
 mod horoscope;
+mod market;
 mod trending;
+mod weather;
+mod xianyu_webview;
 
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 use tauri::Manager;
 
 pub struct AppState {
     pub storage: Arc<db::Storage>,
     pub runs: Arc<Mutex<agents::RunRegistry>>,
+    /// 闲鱼抓价：建隐藏 webview 的命令在等它，页面回调在叫醒它
+    pub xianyu: Arc<xianyu_webview::XianyuWait>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,6 +30,7 @@ pub fn run() {
             let state = AppState {
                 storage: Arc::new(storage),
                 runs: Arc::new(Mutex::new(agents::RunRegistry::default())),
+                xianyu: Arc::new(xianyu_webview::XianyuWait::default()),
             };
             app.manage(state);
             Ok(())
@@ -34,8 +38,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::ping,
             commands::get_storage_info,
+            commands::open_storage_folder,
             commands::get_settings,
             commands::update_settings,
+            commands::change_storage_location,
             commands::categories::list_categories,
             commands::categories::create_category,
             commands::categories::update_category,
@@ -67,6 +73,7 @@ pub fn run() {
             commands::library::delete_library_category,
             commands::library::list_library_files,
             commands::library::import_library_files,
+            commands::library::import_notes_to_library,
             commands::library::delete_library_file,
             commands::library::read_library_text,
             commands::library::library_category_path,
@@ -88,6 +95,15 @@ pub fn run() {
             commands::trending::trending_kinds,
             commands::trending::trending_boards,
             commands::trending::trending_board,
+            commands::reader::open_reader,
+            commands::prices::list_price_targets,
+            commands::prices::add_price_target,
+            commands::prices::remove_price_target,
+            commands::prices::list_price_samples,
+            commands::prices::price_trend,
+            commands::prices::price_overview,
+            commands::prices::fetch_xianyu_price,
+            commands::prices::show_xianyu_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

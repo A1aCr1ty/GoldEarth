@@ -85,6 +85,10 @@ export interface AppSettings {
   xueqiuCookie?: string;
   /** 小红书登录 Cookie（小红书还要 x-s 签名，填了也未必放行） */
   xiaohongshuCookie?: string;
+  /** 冲浪页勾选的平台；未配置（null/缺省）= 默认全选，空数组 = 用户全取消了 */
+  exploreSources?: string[] | null;
+  /** 冲浪页是否自动刷新；未配置（null/缺省）= 默认开 */
+  exploreAutoRefresh?: boolean | null;
 }
 
 // ===== 星座运势 =====
@@ -396,5 +400,64 @@ export interface HotBoard {
   needsCookie: boolean;
   /** 数据来自缓存 */
   cached: boolean;
+}
+
+// ===== 首页「价格追踪」 =====
+
+/** 盯着的一件东西 */
+export interface PriceTarget {
+  id: string;
+  name: string;
+  /** 搜价关键词，留空就用 name */
+  keyword: string;
+  note: string;
+  createdAt: string;
+}
+
+/** 一条价格记录，存的是均价不是单条在售价 */
+export interface PriceSample {
+  id: string;
+  targetId: string;
+  price: number;
+  /** manual = 手动记的；xianyu = 闲鱼搜的 */
+  source: string;
+  /** 这个均价背后统计了几条在售 */
+  samples: number;
+  recordedAt: string;
+}
+
+/** 按天聚合出来的一个点 */
+export interface TrendPoint {
+  day: string;
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+/** 首页卡里的一行 */
+export interface PriceOverview {
+  target: PriceTarget;
+  latest: number | null;
+  /** 最新价相对上一条的涨跌幅；只有一条记录时是 null */
+  changePct: number | null;
+  samples: number;
+  days: number;
+  /** 最近几天的均价，画迷你走势图 */
+  spark: number[];
+  updatedAt: string | null;
+}
+
+/** 借 App 自己的 WebView2 搜价的结果 */
+export interface XianyuFetchSummary {
+  ok: boolean;
+  /** 从响应里认出几个在售价 */
+  count: number;
+  avg: number | null;
+  min: number | null;
+  max: number | null;
+  ret: string;
+  /** 直接显示给用户看的话，包括失败原因 */
+  message: string;
 }
 

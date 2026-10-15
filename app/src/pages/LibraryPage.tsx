@@ -163,7 +163,7 @@ export default function LibraryPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* 左：分类 */}
-        <aside className="flex w-56 shrink-0 flex-col border-r xl:w-64">
+        <aside className="flex w-[clamp(8.5rem,18%,16rem)] shrink-0 flex-col border-r">
           <div className="flex h-8 shrink-0 items-center border-b bg-muted/40 px-2.5 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground">
             分类
           </div>
@@ -223,7 +223,7 @@ export default function LibraryPage() {
         </aside>
 
         {/* 中：这一类收的资料 */}
-        <section className="flex min-w-0 flex-1 flex-col">
+        <section className="flex min-w-[16rem] flex-1 flex-col">
           {!category ? (
             <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
               从左边选一个分类，或者新建一个来收藏资料。
@@ -301,7 +301,7 @@ export default function LibraryPage() {
         </section>
 
         {/* 右：这个分类的 agent 对话 */}
-        <aside className="flex w-72 shrink-0 flex-col border-l xl:w-[26rem]">
+        <aside className="flex w-[clamp(11rem,28%,26rem)] shrink-0 flex-col border-l">
           {category ? (
             <LibraryAgentChat
               category={category}

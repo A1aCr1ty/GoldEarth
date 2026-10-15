@@ -14,6 +14,11 @@ use serde::{Deserialize, Serialize};
 pub enum Source {
     Bilibili,
     Weibo,
+    Baidu,
+    /// 同花顺财经快讯（7×24 盘面）
+    ThsNews,
+    /// 新浪财经滚动新闻
+    SinaFinance,
     Xueqiu,
     Xiaohongshu,
 }
@@ -23,6 +28,9 @@ impl Source {
         match s {
             "bilibili" => Some(Source::Bilibili),
             "weibo" => Some(Source::Weibo),
+            "baidu" => Some(Source::Baidu),
+            "ths" => Some(Source::ThsNews),
+            "sina" => Some(Source::SinaFinance),
             "xueqiu" => Some(Source::Xueqiu),
             "xiaohongshu" => Some(Source::Xiaohongshu),
             _ => None,
@@ -33,6 +41,9 @@ impl Source {
         match self {
             Source::Bilibili => "bilibili",
             Source::Weibo => "weibo",
+            Source::Baidu => "baidu",
+            Source::ThsNews => "ths",
+            Source::SinaFinance => "sina",
             Source::Xueqiu => "xueqiu",
             Source::Xiaohongshu => "xiaohongshu",
         }
@@ -42,6 +53,9 @@ impl Source {
         match self {
             Source::Bilibili => "哔哩哔哩",
             Source::Weibo => "微博",
+            Source::Baidu => "百度热搜",
+            Source::ThsNews => "同花顺快讯",
+            Source::SinaFinance => "新浪财经",
             Source::Xueqiu => "雪球",
             Source::Xiaohongshu => "小红书",
         }
@@ -52,26 +66,56 @@ impl Source {
         match self {
             Source::Bilibili => "#fb7299",
             Source::Weibo => "#e6162d",
+            Source::Baidu => "#2932e1",
+            Source::ThsNews => "#f39800",
+            Source::SinaFinance => "#c62f2f",
             Source::Xueqiu => "#ff6600",
             Source::Xiaohongshu => "#ff2442",
         }
     }
 
+    /// 这是不是**榜单**：榜单有名次，时间流（财经快讯 / 新闻）没有。
+    ///
+    /// 榜单的条目按返回顺序编 1、2、3…，前三条还会用色标强调；
+    /// 时间流那样编会让人误以为是热度排名，所以不编，界面也就不显示序号。
+    pub fn ranked(self) -> bool {
+        matches!(self, Source::Bilibili | Source::Weibo | Source::Baidu)
+    }
+
     /// 这个平台是不是必须带上用户自己的登录 Cookie 才拿得到数据。
     ///
-    /// B 站和微博的榜单接口对匿名请求放行；雪球和小红书都架了登录墙，
+    /// B 站、微博、百度热搜、同花顺快讯、新浪财经都放行匿名请求；
+    /// 雪球和小红书要登录态，但它们现在都不在 [`Source::all`] 里，
+    /// 判定留着——恢复平台时直接可用，`fetch_board` 的 Cookie 短路也靠它生效。
     /// 没 Cookie 时前端要显示「需要 Cookie」而不是一个空白榜单。
     pub fn needs_cookie(self) -> bool {
         matches!(self, Source::Xueqiu | Source::Xiaohongshu)
     }
 
-    /// 页面默认展示的平台，按用户给出的顺序
-    pub fn all() -> [Source; 4] {
+    /// 页面上要展示的平台，按用户给出的顺序。
+    ///
+    /// ⚠️ 两个平台暂时不在这个清单里，都是「要签名、要 Cookie 也过不去」：
+    ///
+    /// - **雪球**（`Source::Xueqiu`）：整站阿里云 WAF。2026-10-15 实测确认，
+    ///   即使用户从已登录会话粘来完整 Cookie，`statuses/hot/listV2.json`
+    ///   仍然返回挑战 HTML（HTTP 200 + `aliyun_waf_aa`），因为 WAF 还认
+    ///   浏览器跑完挑战 JS 写下的 `acw_tc` 和 TLS 指纹。
+    /// - **小红书**（`Source::Xiaohongshu`）：请求要 `x-s` / `x-t` 签名，
+    ///   实测带完整登录 Cookie 仍然是 406。登录态和请求签名是两回事——
+    ///   Cookie 解决前者，签名解决后者，而签名由官方混淆 JS 现算、
+    ///   没有公开算法。详见 README 的「已下线的两个平台」和 `xiaohongshu.rs` 顶部。
+    ///
+    /// 所以这里从 `all()` 摘掉它们、而不是删掉整个实现：卡片不再出现在页面上，
+    /// 前端自动少一块，不用改界面代码；哪天放行了（或者我们改用 WebView
+    /// 借真实浏览器取签名），把变体加回下面这个数组就能恢复。
+    /// fetcher 也因此不会被判定成死代码。
+    pub fn all() -> [Source; 5] {
         [
             Source::Bilibili,
             Source::Weibo,
-            Source::Xueqiu,
-            Source::Xiaohongshu,
+            Source::Baidu,
+            Source::ThsNews,
+            Source::SinaFinance,
         ]
     }
 
@@ -178,6 +222,54 @@ pub fn duration(secs: i64) -> String {
     }
 }
 
+/// 有些接口同一个字段时而给数字、时而给字符串——百度的 `hotScore` 是
+/// `"7809527"`，同花顺快讯的 `code` 是 `"200"`。照单一类型解会整页报错，
+/// 这里两种都接住；实在认不出来就当 0（别为一个展示字段让整块卡片挂掉）。
+pub fn de_loose_i64<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i64, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Num {
+        Int(i64),
+        Str(String),
+    }
+    Ok(match Num::deserialize(d)? {
+        Num::Int(n) => n,
+        Num::Str(s) => s.trim().parse().unwrap_or(0),
+    })
+}
+
+/// unix 秒 → 当地时间的 `14:07`；不是今天就补上月日 `10-13 14:07`。
+///
+/// 财经快讯按「几点的消息」看更有用，所以走本地时区而不是 UTC。
+pub fn local_time(ts: i64) -> String {
+    let Some(dt) = chrono::DateTime::from_timestamp(ts, 0) else {
+        return String::new();
+    };
+    let local = dt.with_timezone(&chrono::Local);
+    if local.date_naive() == chrono::Local::now().date_naive() {
+        local.format("%H:%M").to_string()
+    } else {
+        local.format("%m-%d %H:%M").to_string()
+    }
+}
+
+/// 只编码 URL 查询串里真正会出事的几个字符，够用且不引额外依赖
+pub fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => out.push(ch),
+            _ => {
+                let mut buf = [0u8; 4];
+                for byte in ch.encode_utf8(&mut buf).as_bytes() {
+                    out.push_str(&format!("%{byte:02X}"));
+                }
+            }
+        }
+    }
+    out
+}
+
 /// unix 秒 → `2026-10-14`
 pub fn day_of(ts: i64) -> String {
     chrono::DateTime::from_timestamp(ts, 0)
@@ -193,9 +285,80 @@ mod tests {
     fn parses_every_supported_source() {
         assert_eq!(Source::parse("bilibili"), Some(Source::Bilibili));
         assert_eq!(Source::parse("weibo"), Some(Source::Weibo));
+        assert_eq!(Source::parse("baidu"), Some(Source::Baidu));
+        assert_eq!(Source::parse("ths"), Some(Source::ThsNews));
+        assert_eq!(Source::parse("sina"), Some(Source::SinaFinance));
         assert_eq!(Source::parse("xueqiu"), Some(Source::Xueqiu));
         assert_eq!(Source::parse("xiaohongshu"), Some(Source::Xiaohongshu));
         assert_eq!(Source::parse("douyin"), None);
+    }
+
+    #[test]
+    fn encodes_reserved_characters() {
+        assert_eq!(urlencode("a b"), "a%20b");
+        assert_eq!(urlencode("#a#"), "%23a%23");
+        assert_eq!(urlencode("中文"), "%E4%B8%AD%E6%96%87");
+        assert_eq!(urlencode("ok-_.~"), "ok-_.~");
+    }
+
+    #[test]
+    fn online_sources_are_unique_and_labelled() {
+        // 页面上的卡片直接按这个数组渲染，标识重了前端会互相覆盖
+        let ids: Vec<&str> = Source::all().iter().map(|s| s.id()).collect();
+        let mut uniq = ids.clone();
+        uniq.sort();
+        uniq.dedup();
+        assert_eq!(ids.len(), uniq.len(), "平台标识不能重复：{ids:?}");
+
+        // 清单里全是匿名就能取到的；雪球（WAF）和小红书（签名）已下线
+        assert_eq!(ids, vec!["bilibili", "weibo", "baidu", "ths", "sina"]);
+        for off in ["xueqiu", "xiaohongshu"] {
+            assert!(
+                !ids.contains(&off),
+                "{off} 要签名 / 被 WAF 挡，不该出现在页面上（理由见 Source::all）"
+            );
+        }
+        for s in Source::all() {
+            assert!(!s.label().is_empty() && s.accent().starts_with('#'));
+            assert!(!s.needs_cookie(), "{} 应该匿名可取", s.label());
+        }
+    }
+
+    #[test]
+    fn only_real_rankings_get_ranks() {
+        // 财经快讯 / 新闻是时间流，编名次会让人误当成热度排名
+        assert!(Source::Bilibili.ranked() && Source::Weibo.ranked() && Source::Baidu.ranked());
+        assert!(!Source::ThsNews.ranked(), "同花顺快讯是时间流");
+        assert!(!Source::SinaFinance.ranked(), "新浪财经是时间流");
+    }
+
+    #[test]
+    fn loose_numbers_accept_both_quotes_and_bare() {
+        #[derive(Deserialize)]
+        struct Probe {
+            #[serde(deserialize_with = "de_loose_i64")]
+            n: i64,
+        }
+        let quoted: Probe = serde_json::from_str(r#"{"n":"7809527"}"#).unwrap();
+        assert_eq!(quoted.n, 7_809_527);
+        let bare: Probe = serde_json::from_str(r#"{"n":7809527}"#).unwrap();
+        assert_eq!(bare.n, 7_809_527);
+        // 认不出来就当 0，别为一个展示字段让整块卡片挂掉
+        let junk: Probe = serde_json::from_str(r#"{"n":"N/A"}"#).unwrap();
+        assert_eq!(junk.n, 0);
+    }
+
+    #[test]
+    fn local_time_is_short_for_today_and_dated_otherwise() {
+        // 不写死具体时刻：断言的是形状，跟运行机器的时区无关
+        let now = chrono::Local::now().timestamp();
+        let today = local_time(now);
+        assert_eq!(today.len(), 5, "今天只给 HH:MM，实际：{today}");
+        assert!(today.contains(':'), "实际：{today}");
+
+        let old = local_time(now - 3 * 24 * 3600);
+        assert!(old.contains('-'), "三天前要带日期，实际：{old}");
+        assert!(old.len() > today.len());
     }
 
     #[test]

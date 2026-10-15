@@ -33,10 +33,13 @@ export const tauri = {
   deleteLibraryCategory(id: string) { return invoke<void>("delete_library_category", { id }); },
   listLibraryFiles(categoryId: string) { return invoke<import("@/types").LibraryFile[]>("list_library_files", { categoryId }); },
   importLibraryFiles(categoryId: string, sources: string[]) { return invoke<import("@/types").LibraryFile[]>("import_library_files", { categoryId, sources }); },
+  importNotesToLibrary(categoryId: string, noteIds: string[]) { return invoke<import("@/types").LibraryFile[]>("import_notes_to_library", { categoryId, noteIds }); },
   deleteLibraryFile(categoryId: string, name: string) { return invoke<import("@/types").LibraryFile[]>("delete_library_file", { categoryId, name }); },
   readLibraryText(categoryId: string, name: string) { return invoke<string | null>("read_library_text", { categoryId, name }); },
   libraryCategoryPath(id: string) { return invoke<string | null>("library_category_path", { id }); },
   getStorageInfo() { return invoke<{ root: string; totalNotes: number; totalCategories: number }>("get_storage_info"); },
+  openStorageFolder() { return invoke<void>("open_storage_folder"); },
+  changeStorageLocation(path: string) { return invoke<void>("change_storage_location", { path }); },
   getSettings() { return invoke<import("@/types").AppSettings>("get_settings"); },
   updateSettings(input: Partial<import("@/types").AppSettings>) { return invoke<import("@/types").AppSettings>("update_settings", { input }); },
   // ===== 行情 =====
@@ -62,8 +65,23 @@ export const tauri = {
   trendingSources() { return invoke<import("@/types").HotSourceInfo[]>("trending_sources"); },
   /** B 站可切换的榜单口径 */
   trendingKinds() { return invoke<import("@/types").HotKindInfo[]>("trending_kinds"); },
-  /** 拉一批平台的热榜；sources 不传就是全要 */
-  trendingBoards(sources?: string[], kind?: string, limit?: number) { return invoke<import("@/types").HotBoard[]>("trending_boards", { sources: sources ?? null, kind: kind ?? null, limit: limit ?? null }); },
-  /** 只刷一个平台，冲浪页的单卡刷新用 */
-  trendingBoard(source: string, kind?: string, limit?: number) { return invoke<import("@/types").HotBoard>("trending_board", { source, kind: kind ?? null, limit: limit ?? null }); },
+  /** 拉一批平台的热榜；sources 不传就是全要。force 为真时绕过新鲜缓存真的重抓 */
+  trendingBoards(sources?: string[], kind?: string, limit?: number, force?: boolean) { return invoke<import("@/types").HotBoard[]>("trending_boards", { sources: sources ?? null, kind: kind ?? null, limit: limit ?? null, force: force ?? null }); },
+  /** 只刷一个平台，冲浪页的单卡刷新用；force 语义同上 */
+  trendingBoard(source: string, kind?: string, limit?: number, force?: boolean) { return invoke<import("@/types").HotBoard>("trending_board", { source, kind: kind ?? null, limit: limit ?? null, force: force ?? null }); },
+  // ===== 应用内阅读 =====
+  /** 在 App 自己的阅读器窗口里打开链接，不跳系统浏览器；已开着就复用同一扇窗 */
+  openReader(url: string, title?: string) { return invoke<void>("open_reader", { url, title: title ?? null }); },
+  // ===== 价格追踪 =====
+  listPriceTargets() { return invoke<import("@/types").PriceTarget[]>("list_price_targets"); },
+  addPriceTarget(input: { name: string; keyword?: string; note?: string }) { return invoke<import("@/types").PriceTarget>("add_price_target", { name: input.name, keyword: input.keyword ?? null, note: input.note ?? null }); },
+  removePriceTarget(id: string) { return invoke<void>("remove_price_target", { id }); },
+  listPriceSamples(targetId: string) { return invoke<import("@/types").PriceSample[]>("list_price_samples", { targetId }); },
+  /** 趋势图数据；days 传 0 表示不限 */
+  priceTrend(targetId: string, days?: number) { return invoke<import("@/types").TrendPoint[]>("price_trend", { targetId, days: days ?? null }); },
+  priceOverview(sparkDays?: number) { return invoke<import("@/types").PriceOverview[]>("price_overview", { sparkDays: sparkDays ?? null }); },
+  /** 借 App 自己的 WebView2 搜价：比直连靠谱，风控认的是浏览器指纹 */
+  fetchXianyuPrice(targetId: string) { return invoke<import("@/types").XianyuFetchSummary>("fetch_xianyu_price", { targetId }); },
+  /** 把隐藏的抓价窗口亮出来。闲鱼要登录时用得上，登录态会留在 App 自己的 WebView2 目录里 */
+  showXianyuWindow() { return invoke<void>("show_xianyu_window"); },
 };

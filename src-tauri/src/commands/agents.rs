@@ -1,11 +1,16 @@
 use serde::Deserialize;
 use tauri::State;
 
-use crate::AppState;
 use crate::agents;
-use crate::db::{now_iso, models::{Agent, AgentKind, AgentRun, AgentRunStatus}};
+use crate::db::{
+    models::{Agent, AgentKind, AgentRun, AgentRunStatus},
+    now_iso,
+};
+use crate::AppState;
 
-fn state_err<E: std::fmt::Display>(e: E) -> String { e.to_string() }
+fn state_err<E: std::fmt::Display>(e: E) -> String {
+    e.to_string()
+}
 
 #[tauri::command]
 pub fn list_agents(state: State<'_, AppState>) -> Result<Vec<Agent>, String> {
@@ -25,7 +30,9 @@ pub struct AgentInput {
     pub enabled: bool,
 }
 
-fn default_enabled() -> bool { true }
+fn default_enabled() -> bool {
+    true
+}
 
 #[tauri::command]
 pub fn create_agent(state: State<'_, AppState>, input: AgentInput) -> Result<Agent, String> {
@@ -43,7 +50,11 @@ pub fn create_agent(state: State<'_, AppState>, input: AgentInput) -> Result<Age
 }
 
 #[tauri::command]
-pub fn update_agent(state: State<'_, AppState>, id: String, input: AgentInput) -> Result<Agent, String> {
+pub fn update_agent(
+    state: State<'_, AppState>,
+    id: String,
+    input: AgentInput,
+) -> Result<Agent, String> {
     state
         .storage
         .update_agent(
@@ -138,7 +149,10 @@ pub fn cancel_agent_run(state: State<'_, AppState>, run_id: String) -> Result<()
 }
 
 #[tauri::command]
-pub fn list_agent_runs(state: State<'_, AppState>, limit: Option<usize>) -> Result<Vec<AgentRun>, String> {
+pub fn list_agent_runs(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> Result<Vec<AgentRun>, String> {
     Ok(state.storage.list_runs(limit.unwrap_or(50)))
 }
 
@@ -226,6 +240,9 @@ pub fn get_library_dir(state: State<'_, AppState>, id: String) -> Result<Option<
 
 /// 笔记在 vault 里的相对路径，发给 Agent 让它知道该改哪个文件
 #[tauri::command]
-pub fn get_note_file_path(state: State<'_, AppState>, id: String) -> Result<Option<String>, String> {
+pub fn get_note_file_path(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Option<String>, String> {
     Ok(state.storage.relative_note_path(&id))
 }

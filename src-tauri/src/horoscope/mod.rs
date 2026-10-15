@@ -129,7 +129,9 @@ impl Zodiac {
     }
 
     pub fn from_key(key: &str) -> Option<Zodiac> {
-        Zodiac::ALL.into_iter().find(|z| z.key() == key.trim().to_ascii_lowercase())
+        Zodiac::ALL
+            .into_iter()
+            .find(|z| z.key() == key.trim().to_ascii_lowercase())
     }
 }
 
@@ -223,7 +225,12 @@ pub struct Horoscope {
 }
 
 fn str_field(value: &serde_json::Value, key: &str) -> String {
-    value.get(key).and_then(|v| v.as_str()).unwrap_or_default().trim().to_string()
+    value
+        .get(key)
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .trim()
+        .to_string()
 }
 
 /// 星级只认 1..=5，上游偶尔给 0 或越界值，那种情况宁可不画星
@@ -367,7 +374,11 @@ pub fn parse(payload: &serde_json::Value, sign: Zodiac) -> Result<Horoscope, Str
 /// 拉一次当日运势。带按天分键的缓存。
 pub async fn daily(sign: Zodiac) -> Result<Horoscope, String> {
     // 缓存键带上日期：跨零点时 TTL 还没到也不会把昨天的运势端上桌
-    let key = format!("{}|{}", sign.key(), crate::db::now_iso().chars().take(10).collect::<String>());
+    let key = format!(
+        "{}|{}",
+        sign.key(),
+        crate::db::now_iso().chars().take(10).collect::<String>()
+    );
     if let Some(hit) = cache_get(&key) {
         return Ok(hit);
     }
@@ -561,7 +572,11 @@ mod tests {
         assert_eq!(names.len(), 12, "星座中文名有重复");
         for sign in Zodiac::ALL {
             assert_eq!(Zodiac::from_key(sign.key()), Some(sign));
-            assert_eq!(Zodiac::from_key(&sign.key().to_uppercase()), Some(sign), "应容许大写");
+            assert_eq!(
+                Zodiac::from_key(&sign.key().to_uppercase()),
+                Some(sign),
+                "应容许大写"
+            );
         }
     }
 
@@ -593,12 +608,13 @@ mod tests {
         assert_eq!(h.period, "今日运势");
         assert_eq!(h.aspects.len(), 5);
         for a in &h.aspects {
-            assert!(a.stars <= 5, "{label} 星级越界: {stars}", label = a.label, stars = a.stars);
             assert!(
-                !a.text.is_empty(),
-                "{label} 解读是空的",
-                label = a.label
+                a.stars <= 5,
+                "{label} 星级越界: {stars}",
+                label = a.label,
+                stars = a.stars
             );
+            assert!(!a.text.is_empty(), "{label} 解读是空的", label = a.label);
             assert!(
                 a.text.ends_with('。'),
                 "{label} 解读没停在句号，疑似句尾残留没清干净: {text}",
@@ -606,6 +622,9 @@ mod tests {
                 text = a.text
             );
         }
-        assert!(h.aspects.iter().any(|a| a.stars > 0), "五项星级全是 0，不像真实数据");
+        assert!(
+            h.aspects.iter().any(|a| a.stars > 0),
+            "五项星级全是 0，不像真实数据"
+        );
     }
 }

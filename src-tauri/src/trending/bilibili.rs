@@ -10,7 +10,7 @@
 use serde::Deserialize;
 
 use super::http::{client, UA};
-use super::types::{compact, duration, day_of, HotItem};
+use super::types::{compact, day_of, duration, HotItem};
 
 const POPULAR_URL: &str = "https://api.bilibili.com/x/web-interface/popular";
 const RANKING_URL: &str = "https://api.bilibili.com/x/web-interface/ranking/v2";
@@ -107,7 +107,12 @@ pub async fn fetch(kind: Kind, limit: usize) -> Result<Vec<HotItem>, String> {
         .await
         .map_err(|e| format!("请求失败：{e}"))?
         .error_for_status()
-        .map_err(|e| format!("B 站返回 {}：{e}", e.status().map(|s| s.as_u16()).unwrap_or(0)))?
+        .map_err(|e| {
+            format!(
+                "B 站返回 {}：{e}",
+                e.status().map(|s| s.as_u16()).unwrap_or(0)
+            )
+        })?
         .json()
         .await
         .map_err(|e| format!("解析失败：{e}"))?;

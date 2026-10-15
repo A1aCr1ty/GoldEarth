@@ -168,20 +168,24 @@ pub async fn enrich_names(quotes: &mut [Quote]) {
     }
     // 东财批量接口一次最多 50 个
     for chunk in quotes.chunks_mut(50) {
-        let secids: Vec<String> = chunk
-            .iter()
-            .map(|q| symbol::secid(&q.code))
-            .collect();
+        let secids: Vec<String> = chunk.iter().map(|q| symbol::secid(&q.code)).collect();
         let url = format!(
             "https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&secids={}&fields=f12,f14",
             secids.join(",")
         );
         if let Ok(v) = fetch_json(&url).await {
-            if let Some(list) = v.get("data").and_then(|d| d.get("diff")).and_then(|d| d.as_array()) {
+            if let Some(list) = v
+                .get("data")
+                .and_then(|d| d.get("diff"))
+                .and_then(|d| d.as_array())
+            {
                 for q in chunk.iter_mut() {
                     let want = symbol::symbol_of(&q.code);
                     if let Some(hit) = list.iter().find(|d| {
-                        d.get("f12").and_then(|x| x.as_str()).map(|s| s == want).unwrap_or(false)
+                        d.get("f12")
+                            .and_then(|x| x.as_str())
+                            .map(|s| s == want)
+                            .unwrap_or(false)
                     }) {
                         if let Some(name) = hit.get("f14").and_then(|x| x.as_str()) {
                             if !name.is_empty() {
@@ -307,7 +311,10 @@ mod tests {
         let value = serde_json::json!({"hello": "world"});
         cache_put(key, &value);
         assert!(cache_get(key, TTL_QUOTE).is_some());
-        assert!(cache_get(key, Duration::from_nanos(0)).is_none(), "过期应读不到");
+        assert!(
+            cache_get(key, Duration::from_nanos(0)).is_none(),
+            "过期应读不到"
+        );
     }
 
     #[test]
@@ -333,8 +340,15 @@ mod tests {
         let mut list = quotes(&["sh600519".into()]).await.expect("腾讯快照");
         enrich_names(&mut list).await;
         let q = &list[0];
-        println!("快照: {} {} 现价={} 昨收={} 涨跌={}% 成交额={}", q.name, q.symbol, q.price, q.prev_close, q.change_pct, q.amount);
-        assert!(q.price > 100.0 && q.price < 5000.0, "茅台价格区间明显不对: {}", q.price);
+        println!(
+            "快照: {} {} 现价={} 昨收={} 涨跌={}% 成交额={}",
+            q.name, q.symbol, q.price, q.prev_close, q.change_pct, q.amount
+        );
+        assert!(
+            q.price > 100.0 && q.price < 5000.0,
+            "茅台价格区间明显不对: {}",
+            q.price
+        );
         assert_eq!(q.name, "贵州茅台", "中文名称回填失败");
         assert!(q.bids.len() == 5 && q.asks.len() == 5, "五档应有 5 档");
         assert!(q.amount > 1e8, "茅台日成交额不可能低于 1 亿");
@@ -355,11 +369,21 @@ mod tests {
         let r = rankings(RankKind::Gainers, 20).await.expect("涨幅榜");
         println!("涨幅榜首: {} {}", r[0].name, r[0].change_pct);
         assert_eq!(r.len(), 20);
-        assert!(r[0].code.starts_with("sh") || r[0].code.starts_with("sz") || r[0].code.starts_with("bj"));
+        assert!(
+            r[0].code.starts_with("sh")
+                || r[0].code.starts_with("sz")
+                || r[0].code.starts_with("bj")
+        );
 
         // 资金流
         let f = fund_flow("sh600519").await.expect("资金流");
-        println!("资金流: 主力 {} / 超大 {} / 大 {}", f.main.net, f.super_large.net, f.large.net);
-        assert!((f.super_large.net + f.large.net - f.main.net).abs() < 1.0, "资金流分档不自洽");
+        println!(
+            "资金流: 主力 {} / 超大 {} / 大 {}",
+            f.main.net, f.super_large.net, f.large.net
+        );
+        assert!(
+            (f.super_large.net + f.large.net - f.main.net).abs() < 1.0,
+            "资金流分档不自洽"
+        );
     }
 }

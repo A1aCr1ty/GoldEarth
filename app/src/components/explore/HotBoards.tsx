@@ -2,8 +2,8 @@ import { useState } from "react";
 import {
   AlertCircle,
   Check,
+  Clock,
   Cookie,
-  ExternalLink,
   Flame,
   RefreshCw,
   Settings2,
@@ -12,11 +12,38 @@ import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { errText } from "@/lib/errors";
+import { tauri } from "@/lib/tauri";
 import type { HotBoard, HotItem, HotSourceInfo } from "@/types";
 
-/** 打开系统浏览器看原文。走 shell 插件，和知识库打开文件夹同一条路子 */
-function openExternal(url: string, e: React.MouseEvent) {
+/**
+ * 点条目怎么打开。
+ *
+ * 默认在 App 内的阅读器窗口里打开——这几个平台的页面大多禁止被 iframe 嵌套，
+ * 所以走后端新开一个 WebView 窗口（见 `commands/reader.rs`），
+ * 用户不用切到浏览器，App 窗口也不会被顶掉。
+ *
+ * **Ctrl / ⌘ + 点击和中键仍然走系统浏览器**：站内页面偶尔有兼容问题
+ * （登录态、地区风控），留一个能立刻绕开的出口，不至于只能干等。
+ */
+async function openItem(item: HotItem, e: React.MouseEvent) {
   e.preventDefault();
+  const wantsBrowser = e.ctrlKey || e.metaKey || e.button === 1;
+  if (wantsBrowser) {
+    openExternal(item.url);
+    return;
+  }
+  try {
+    await tauri.openReader(item.url, item.title);
+  } catch (err) {
+    // 窗口起不来（权限、平台限制等）时退回系统浏览器，别让用户点了没反应
+    openExternal(item.url);
+    console.warn("阅读器打开失败，已退回系统浏览器：", errText(err));
+  }
+}
+
+/** 打开系统浏览器 */
+function openExternal(url: string) {
   void openUrl(url).catch(() => window.open(url, "_blank", "noopener"));
 }
 
@@ -132,18 +159,26 @@ function Row({ item, accent }: { item: HotItem; accent: string }) {
   return (
     <a
       href={item.url}
-      onClick={(e) => openExternal(item.url, e)}
+      onClick={(e) => void openItem(item, e)}
+      // 中键走的是 auxclick，click 里拿不到 button === 1
+      onAuxClick={(e) => {
+        if (e.button === 1) void openItem(item, e);
+      }}
+      title="在应用内打开（按住 Ctrl / ⌘ 点或中键可跳系统浏览器）"
       className="flex gap-2.5 border-b px-3 py-2 transition-colors last:border-b-0 hover:bg-accent/60"
     >
-      <span
-        className={cn(
-          "mt-0.5 w-4 shrink-0 text-center font-mono text-xs tabular-nums",
-          item.rank <= 3 ? "font-bold" : "text-muted-foreground"
-        )}
-        style={item.rank <= 3 ? { color: accent } : undefined}
-      >
-        {item.rank}
-      </span>
+      {/* 榜单才显示序号；快讯 / 新闻是时间流，rank 为 0，画个「0」反而误导 */}
+      {item.rank > 0 && (
+        <span
+          className={cn(
+            "mt-0.5 w-4 shrink-0 text-center font-mono text-xs tabular-nums",
+            item.rank <= 3 ? "font-bold" : "text-muted-foreground"
+          )}
+          style={item.rank <= 3 ? { color: accent } : undefined}
+        >
+          {item.rank}
+        </span>
+      )}
 
       {showCover && (
         <img
@@ -157,9 +192,15 @@ function Row({ item, accent }: { item: HotItem; accent: string }) {
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-2 text-[0.8125rem] leading-snug">{item.title}</p>
+        {/* 标题和摘要都按行数截断（热榜一屏要放下几十条，不能无限撑高），
+            完整文案放到 title 上，鼠标停住能看全 */}
+        <p className="line-clamp-2 text-[0.8125rem] leading-snug" title={item.title}>
+          {item.title}
+        </p>
         {item.summary && (
-          <p className="mt-0.5 line-clamp-1 text-[0.6875rem] text-muted-foreground">{item.summary}</p>
+          <p className="mt-0.5 line-clamp-1 text-[0.6875rem] text-muted-foreground" title={item.summary}>
+            {item.summary}
+          </p>
         )}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] text-muted-foreground">
           {item.tag && (
@@ -170,7 +211,7 @@ function Row({ item, accent }: { item: HotItem; accent: string }) {
               {item.tag}
             </span>
           )}
-          {item.author && <span className="truncate">{item.author}</span>}
+          {item.author && <span className="max-w-full truncate">{item.author}</span>}
           {item.hotText && <span className="tabular-nums">{item.hotText}</span>}
           {item.meta && <span>{item.meta}</span>}
         </div>
@@ -234,7 +275,10 @@ export function HotBoardCard({
             </div>
           </div>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          // 卡片不再自己滚动：条目有多少就铺多高，整页只有一个滚动条。
+          // 以前这里套了个内层滚动区，50 条的榜单被关在一屏里，
+          // 看不见还多一根滚动条，两头都不讨好。
+          <div className="min-h-0 flex-1">
             {board.items.map((item) => (
               <Row key={`${board.source}-${item.rank}-${item.url}`} item={item} accent={board.accent} />
             ))}
@@ -245,18 +289,24 @@ export function HotBoardCard({
   );
 }
 
-/** 卡片底部的条数与更新时间 */
+/**
+ * 卡片底部的条数与更新时间。
+ *
+ * 时间显示到**秒**：只显示到分钟的话，同一分钟里点好几次刷新，
+ * 看上去和没刷一样（内容本来也不会在几秒内变），用户会以为刷新坏了。
+ */
 export function BoardFooter({ board }: { board: HotBoard }) {
   if (board.items.length === 0) return null;
   return (
     <div className="flex items-center justify-end gap-1 px-3 pb-2 text-[0.6875rem] text-muted-foreground">
       <span>{board.items.length} 条</span>
       {board.updatedAt && <span>·</span>}
-      <span className="flex items-center gap-1">
-        <ExternalLink className="h-3 w-3" />
+      <span className="flex items-center gap-1" title="这次数据抓取于">
+        <Clock className="h-3 w-3" />
         {new Date(board.updatedAt).toLocaleTimeString("zh-CN", {
           hour: "2-digit",
           minute: "2-digit",
+          second: "2-digit",
         })}
       </span>
     </div>

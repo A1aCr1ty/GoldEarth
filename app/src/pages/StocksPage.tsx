@@ -98,7 +98,7 @@ export default function StocksPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* 左列：自选股 + 榜单 */}
-        <aside className="flex w-56 shrink-0 flex-col border-r xl:w-64">
+        <aside className="flex w-[clamp(8.5rem,18%,16rem)] shrink-0 flex-col border-r">
           <div className="h-[45%] border-b">
             <WatchList
               items={s.watchlist}
@@ -141,7 +141,7 @@ export default function StocksPage() {
         </aside>
 
         {/* 中列：头部 + 图表 */}
-        <section className="flex min-w-0 flex-1 flex-col">
+        <section className="flex min-w-[16rem] flex-1 flex-col">
           <StockHeader quote={s.detail} />
           <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b px-3 py-1.5">
             {PERIODS.map((p) => (
@@ -191,7 +191,7 @@ export default function StocksPage() {
         </section>
 
         {/* 右栏：行情面板 / Agent 分析 两个 tab 切换 */}
-        <aside className="flex w-72 shrink-0 flex-col border-l xl:w-80">
+        <aside className="flex w-[clamp(11rem,28%,20rem)] shrink-0 flex-col border-l">
           <div className="flex h-8 shrink-0 items-center gap-1 border-b bg-muted/40 px-1.5">
             <TabButton active={rightTab === "market"} onClick={() => setRightTab("market")}>
               盘口 · 指标

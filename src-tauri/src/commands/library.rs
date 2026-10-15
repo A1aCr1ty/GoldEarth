@@ -19,7 +19,10 @@ pub struct LibraryCategoryView {
 
 impl LibraryCategoryView {
     fn new(category: LibraryCategory, file_count: usize) -> Self {
-        Self { category, file_count }
+        Self {
+            category,
+            file_count,
+        }
     }
 }
 
@@ -34,7 +37,9 @@ pub struct LibraryCategoryInput {
 
 /// 知识库分类列表（含各自的资料数量）
 #[tauri::command]
-pub fn list_library_categories(state: State<'_, AppState>) -> Result<Vec<LibraryCategoryView>, String> {
+pub fn list_library_categories(
+    state: State<'_, AppState>,
+) -> Result<Vec<LibraryCategoryView>, String> {
     let library = state.storage.library();
     Ok(library
         .list_categories()
@@ -65,7 +70,11 @@ pub fn create_library_category(
         created_at: now.clone(),
         updated_at: now,
     };
-    let created = state.storage.library().insert_category(category).map_err(state_err)?;
+    let created = state
+        .storage
+        .library()
+        .insert_category(category)
+        .map_err(state_err)?;
     Ok(LibraryCategoryView::new(created, 0))
 }
 
@@ -107,12 +116,19 @@ pub fn set_library_category_agent(
 /// 删分类：目录里的资料一并删除（前端会先让用户确认）
 #[tauri::command]
 pub fn delete_library_category(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    state.storage.library().delete_category(&id).map_err(state_err)
+    state
+        .storage
+        .library()
+        .delete_category(&id)
+        .map_err(state_err)
 }
 
 /// 分类下收的资料
 #[tauri::command]
-pub fn list_library_files(state: State<'_, AppState>, category_id: String) -> Result<Vec<LibraryFile>, String> {
+pub fn list_library_files(
+    state: State<'_, AppState>,
+    category_id: String,
+) -> Result<Vec<LibraryFile>, String> {
     Ok(state.storage.library().list_files(&category_id))
 }
 
@@ -128,6 +144,27 @@ pub fn import_library_files(
     }
     state
         .storage
+        .library()
+        .import_files(&category_id, &sources)
+        .map_err(state_err)
+}
+
+/// 从分类页选中的笔记复制到知识库分类，不要求用户再从磁盘定位文件。
+#[tauri::command]
+pub fn import_notes_to_library(
+    state: State<'_, AppState>,
+    category_id: String,
+    note_ids: Vec<String>,
+) -> Result<Vec<LibraryFile>, String> {
+    let storage = &state.storage;
+    let mut sources = Vec::with_capacity(note_ids.len());
+    for id in note_ids {
+        let relative = storage
+            .relative_note_path(&id)
+            .ok_or_else(|| format!("找不到笔记：{id}"))?;
+        sources.push(storage.vault_root().join(relative).display().to_string());
+    }
+    storage
         .library()
         .import_files(&category_id, &sources)
         .map_err(state_err)
@@ -164,7 +201,10 @@ pub fn read_library_text(
 
 /// 分类目录的绝对路径，界面上显示给用户看（也方便手动往里丢文件）
 #[tauri::command]
-pub fn library_category_path(state: State<'_, AppState>, id: String) -> Result<Option<String>, String> {
+pub fn library_category_path(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Option<String>, String> {
     Ok(state
         .storage
         .library()

@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
-import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass } from "lucide-react";
+import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags } from "lucide-react";
 const nav = [
   { to: "/home", label: "天气", icon: LayoutDashboard },
   { to: "/explore", label: "冲浪", icon: Compass },
+  { to: "/prices", label: "价格", icon: Tags },
   { to: "/library", label: "知识库", icon: BookOpen },
   { to: "/stocks", label: "股票", icon: TrendingUp },
   { to: "/notes", label: "笔记", icon: FileText },
@@ -38,15 +39,18 @@ export function AppShell() {
   }, []);
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      <aside className="flex w-56 flex-col border-r bg-card">
+      {/* 侧栏跟着窗口缩：写死 14rem 的话，窗口一窄就先吃掉内容区的宽度，
+          三栏页面（笔记 / 股票 / 知识库）会被挤到看不见东西 */}
+      <aside className="flex w-[clamp(9rem,18%,14rem)] shrink-0 flex-col border-r bg-card">
         <div className="flex h-14 items-center px-4 border-b">
-          <span className="text-lg font-semibold tracking-tight">GoldEarth</span>
+          <span className="truncate text-lg font-semibold tracking-tight">GoldEarth</span>
         </div>
         <nav className="flex-1 space-y-1 p-2">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
+              title={label}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
@@ -54,12 +58,14 @@ export function AppShell() {
                 )
               }
             >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="border-t p-3 text-xs text-muted-foreground">本地优先 · 离线可用</div>
+        <div className="border-t p-3 text-xs text-muted-foreground">
+          <span className="line-clamp-2">本地优先 · 离线可用</span>
+        </div>
       </aside>
       <main className="flex-1 overflow-hidden">
         <Outlet />

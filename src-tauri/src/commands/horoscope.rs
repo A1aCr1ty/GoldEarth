@@ -43,7 +43,11 @@ mod tests {
         assert_eq!(Zodiac::from_key("leo"), Some(Zodiac::Leo));
         assert_eq!(Zodiac::from_key("  Leo "), Some(Zodiac::Leo));
         assert_eq!(Zodiac::from_key("libra"), Some(Zodiac::Libra));
-        assert_eq!(Zodiac::from_key("狮子座"), None, "上游只认英文小写，中文名不行");
+        assert_eq!(
+            Zodiac::from_key("狮子座"),
+            None,
+            "上游只认英文小写，中文名不行"
+        );
         assert_eq!(Zodiac::from_key(""), None);
     }
 }
