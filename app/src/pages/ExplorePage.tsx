@@ -3,7 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AUTO_REFRESH_MS, useTrending } from "@/store/trending";
-import { BoardFooter, HotBoardCard } from "@/components/explore/HotBoards";
+import { BoardFooter, HotBoardCard, OpenSourceButton } from "@/components/explore/HotBoards";
 
 export default function ExplorePage() {
   const s = useTrending();
@@ -117,6 +117,7 @@ export default function ExplorePage() {
                 aria-hidden
               />
               {src.label}
+              {src.usesBrowser && <span className="text-[0.625rem] opacity-70">· 网页推荐</span>}
               {src.needsCookie && (
                 <span className="text-[0.625rem] opacity-70">{src.cookieReady ? "· 已配置" : "· 需 Cookie"}</span>
               )}
@@ -152,9 +153,10 @@ export default function ExplorePage() {
                 return (
                   <div
                     key={key}
-                    className="flex h-[16rem] items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground"
+                    className="flex h-[16rem] flex-col items-center justify-center gap-3 rounded-lg border bg-card text-xs text-muted-foreground"
                   >
-                    加载中…
+                    {source?.label}加载中…
+                    {source?.usesBrowser && <><OpenSourceButton source={source} /><p>首次使用可打开平台登录</p></>}
                   </div>
                 );
               }

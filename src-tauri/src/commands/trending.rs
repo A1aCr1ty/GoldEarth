@@ -25,6 +25,7 @@ pub fn trending_sources(state: State<'_, AppState>) -> Vec<SourceInfo> {
 /// 不用重复打接口。
 #[tauri::command]
 pub async fn trending_boards(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     sources: Option<Vec<String>>,
     kind: Option<String>,
@@ -49,7 +50,7 @@ pub async fn trending_boards(
 
     let kind = kind.as_deref().and_then(Kind::parse);
     let settings = state.storage.settings();
-    let boards = trending::feed(&wanted, kind, &settings, force.unwrap_or(false)).await;
+    let boards = trending::feed(app, &wanted, kind, &settings, force.unwrap_or(false)).await;
 
     // limit 在后端统一截，前端就不用每张卡片自己切一刀
     Ok(match limit {
@@ -68,6 +69,7 @@ pub async fn trending_boards(
 /// `force` 语义同上：显式刷新要真的重新抓。
 #[tauri::command]
 pub async fn trending_board(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     source: String,
     kind: Option<String>,
@@ -77,7 +79,8 @@ pub async fn trending_board(
     let source = Source::parse(source.trim()).ok_or_else(|| format!("未知平台：{source}"))?;
     let kind = kind.as_deref().and_then(Kind::parse);
     let settings = state.storage.settings();
-    let mut board = trending::fetch_board(source, kind, &settings, force.unwrap_or(false)).await;
+    let mut board =
+        trending::fetch_for_app(app, source, kind, &settings, force.unwrap_or(false)).await;
     if let Some(n) = limit.filter(|n| *n > 0) {
         board.items.truncate(n);
     }
@@ -96,6 +99,14 @@ pub fn trending_kinds() -> Vec<KindInfo> {
         .collect()
 }
 
+#[tauri::command]
+pub async fn show_trending_source(app: tauri::AppHandle, source: String) -> Result<(), String> {
+    let source = Source::parse(&source)
+        .filter(|s| s.uses_browser())
+        .ok_or_else(|| "该平台没有登录窗口".to_string())?;
+    trending::browser::show(app, source).await
+}
+
 /// 平台元信息：名字、色标、要不要 Cookie、用户配了没
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -106,6 +117,7 @@ pub struct SourceInfo {
     pub needs_cookie: bool,
     /// 用户已经填了 Cookie 吗（不返回 Cookie 内容本身）
     pub cookie_ready: bool,
+    pub uses_browser: bool,
 }
 
 impl SourceInfo {
@@ -115,8 +127,9 @@ impl SourceInfo {
             value: s.id().to_string(),
             label: s.label().to_string(),
             accent: s.accent().to_string(),
-            needs_cookie: s.needs_cookie(),
+            needs_cookie: s.needs_cookie() && !s.uses_browser(),
             cookie_ready,
+            uses_browser: s.uses_browser(),
         }
     }
 }
@@ -140,8 +153,7 @@ mod tests {
             .map(|s| SourceInfo::from_source(s, &settings))
             .collect();
 
-        // 清单里全是匿名可取的（雪球 WAF、小红书签名，都已下线，理由见 Source::all）
-        assert_eq!(list.len(), 5);
+        assert_eq!(list.len(), 7);
         assert_eq!(list[0].value, "bilibili");
         assert_eq!(list[1].label, "微博");
         assert_eq!(list[2].value, "baidu");
@@ -150,10 +162,11 @@ mod tests {
         assert_eq!(list[3].label, "同花顺快讯");
         assert_eq!(list[4].value, "sina");
         assert_eq!(list[4].label, "新浪财经");
-        for off in ["xueqiu", "xiaohongshu"] {
-            assert!(!list.iter().any(|s| s.value == off), "{off} 已下线");
-        }
-        // 页面上这五张卡都不该再弹「需要 Cookie」
+        assert!(list
+            .iter()
+            .filter(|s| s.uses_browser)
+            .map(|s| s.value.as_str())
+            .eq(["xueqiu", "xiaohongshu"]));
         assert!(list.iter().all(|s| !s.needs_cookie));
     }
 

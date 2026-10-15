@@ -63,6 +63,7 @@ export const tauri = {
   // ===== 网上冲浪 =====
   /** 页面上有哪些平台、各自什么状态（含需不需要 Cookie） */
   trendingSources() { return invoke<import("@/types").HotSourceInfo[]>("trending_sources"); },
+  showTrendingSource(source: string) { return invoke<void>("show_trending_source", { source }); },
   /** B 站可切换的榜单口径 */
   trendingKinds() { return invoke<import("@/types").HotKindInfo[]>("trending_kinds"); },
   /** 拉一批平台的热榜；sources 不传就是全要。force 为真时绕过新鲜缓存真的重抓 */

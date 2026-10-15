@@ -10,6 +10,7 @@
 
 pub mod baidu;
 pub mod bilibili;
+pub mod browser;
 /// 共用的 HTTP 客户端也拿给别处用（闲鱼探针同样要挂桌面 UA）
 pub(crate) mod http;
 pub mod sina_finance;
@@ -232,7 +233,27 @@ pub async fn fetch_board(
 /// 每个平台各起一个 task，所以**平台数量增加不用改这里**。
 /// 之前用的是 `tokio::join!` 定长宏（只覆盖到 4 个），一旦超过 4 个平台
 /// 就会退化成按批次串行——加财经两个源正好踩到那儿。
+pub async fn fetch_for_app(
+    app: tauri::AppHandle,
+    source: Source,
+    kind: Option<Kind>,
+    settings: &AppSettings,
+    force: bool,
+) -> HotBoard {
+    if !source.uses_browser() {
+        return fetch_board(source, kind, settings, force).await;
+    }
+    let key = format!("{}:browser", source.id());
+    if !force {
+        if let Some(hit) = cache_get(&key) {
+            return hit;
+        }
+    }
+    finish(source, &key, browser::fetch(app, source).await, false)
+}
+
 pub async fn feed(
+    app: tauri::AppHandle,
     sources: &[Source],
     kind: Option<Kind>,
     settings: &AppSettings,
@@ -246,9 +267,10 @@ pub async fn feed(
     // 带进 spawn 的 future 里，编译器会要求它活成 'static
     for &source in sources {
         let settings = shared.clone();
+        let app = app.clone();
         tasks.push((
             source,
-            tokio::spawn(async move { fetch_board(source, kind, &settings, force).await }),
+            tokio::spawn(async move { fetch_for_app(app, source, kind, &settings, force).await }),
         ));
     }
 
@@ -424,7 +446,7 @@ mod tests {
 
     /// Cookie 门控这条短路现在页面上用不到（在线的平台都匿名可取），
     /// 但 `fetch_board` 仍靠它兜底——平台恢复时不该静默发出一个没 Cookie 的请求。
-    /// 所以拿已下线的平台来测这条路径。
+    /// 此处只覆盖保留的旧 HTTP 路径；应用中的这两个源走 fetch_for_app 网页会话。
     #[tokio::test]
     async fn cookie_gated_sources_report_needs_cookie_without_network() {
         for source in [Source::Xueqiu, Source::Xiaohongshu] {
@@ -480,13 +502,13 @@ mod tests {
     /// cargo test --no-default-features --lib trending_smoke -- --ignored --nocapture
     /// ```
     /// 目的：确认清单里这几个平台的匿名接口现在还放行——它们哪天加了
-    /// 风控会立刻在这里暴露。雪球和小红书已从 `Source::all()` 下线，
-    /// 不再走这个循环；要复查它们得单独指定 source 调 `fetch_board`。
+    /// 风控会立刻在这里暴露。网页登录源需要桌面 WebView 与用户会话，
+    /// 不走这个仅检查匿名 HTTP 数据源的循环。
     #[tokio::test]
     #[ignore = "需要联网"]
     async fn trending_smoke() {
         let settings = crate::db::models::AppSettings::default();
-        for source in Source::all() {
+        for source in Source::all().into_iter().filter(|s| !s.uses_browser()) {
             let board = fetch_board(source, Some(Kind::Popular), &settings, false).await;
             println!(
                 "[{}] 条目={} 需Cookie={} 缓存={} 错误={:?}",

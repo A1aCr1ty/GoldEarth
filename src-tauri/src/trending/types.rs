@@ -82,40 +82,25 @@ impl Source {
         matches!(self, Source::Bilibili | Source::Weibo | Source::Baidu)
     }
 
-    /// 这个平台是不是必须带上用户自己的登录 Cookie 才拿得到数据。
-    ///
-    /// B 站、微博、百度热搜、同花顺快讯、新浪财经都放行匿名请求；
-    /// 雪球和小红书要登录态，但它们现在都不在 [`Source::all`] 里，
-    /// 判定留着——恢复平台时直接可用，`fetch_board` 的 Cookie 短路也靠它生效。
-    /// 没 Cookie 时前端要显示「需要 Cookie」而不是一个空白榜单。
+    /// 旧 HTTP 抓取器的鉴权要求；网页会话入口不使用手动 Cookie。
     pub fn needs_cookie(self) -> bool {
         matches!(self, Source::Xueqiu | Source::Xiaohongshu)
     }
 
-    /// 页面上要展示的平台，按用户给出的顺序。
-    ///
-    /// ⚠️ 两个平台暂时不在这个清单里，都是「要签名、要 Cookie 也过不去」：
-    ///
-    /// - **雪球**（`Source::Xueqiu`）：整站阿里云 WAF。2026-10-15 实测确认，
-    ///   即使用户从已登录会话粘来完整 Cookie，`statuses/hot/listV2.json`
-    ///   仍然返回挑战 HTML（HTTP 200 + `aliyun_waf_aa`），因为 WAF 还认
-    ///   浏览器跑完挑战 JS 写下的 `acw_tc` 和 TLS 指纹。
-    /// - **小红书**（`Source::Xiaohongshu`）：请求要 `x-s` / `x-t` 签名，
-    ///   实测带完整登录 Cookie 仍然是 406。登录态和请求签名是两回事——
-    ///   Cookie 解决前者，签名解决后者，而签名由官方混淆 JS 现算、
-    ///   没有公开算法。详见 README 的「已下线的两个平台」和 `xiaohongshu.rs` 顶部。
-    ///
-    /// 所以这里从 `all()` 摘掉它们、而不是删掉整个实现：卡片不再出现在页面上，
-    /// 前端自动少一块，不用改界面代码；哪天放行了（或者我们改用 WebView
-    /// 借真实浏览器取签名），把变体加回下面这个数组就能恢复。
-    /// fetcher 也因此不会被判定成死代码。
-    pub fn all() -> [Source; 5] {
+    pub fn uses_browser(self) -> bool {
+        matches!(self, Source::Xueqiu | Source::Xiaohongshu)
+    }
+
+    /// 页面上要展示的平台。雪球和小红书通过应用内网页会话读取推荐。
+    pub fn all() -> [Source; 7] {
         [
             Source::Bilibili,
             Source::Weibo,
             Source::Baidu,
             Source::ThsNews,
             Source::SinaFinance,
+            Source::Xueqiu,
+            Source::Xiaohongshu,
         ]
     }
 
@@ -310,17 +295,24 @@ mod tests {
         uniq.dedup();
         assert_eq!(ids.len(), uniq.len(), "平台标识不能重复：{ids:?}");
 
-        // 清单里全是匿名就能取到的；雪球（WAF）和小红书（签名）已下线
-        assert_eq!(ids, vec!["bilibili", "weibo", "baidu", "ths", "sina"]);
-        for off in ["xueqiu", "xiaohongshu"] {
-            assert!(
-                !ids.contains(&off),
-                "{off} 要签名 / 被 WAF 挡，不该出现在页面上（理由见 Source::all）"
-            );
-        }
+        assert_eq!(
+            ids,
+            vec![
+                "bilibili",
+                "weibo",
+                "baidu",
+                "ths",
+                "sina",
+                "xueqiu",
+                "xiaohongshu"
+            ]
+        );
         for s in Source::all() {
             assert!(!s.label().is_empty() && s.accent().starts_with('#'));
-            assert!(!s.needs_cookie(), "{} 应该匿名可取", s.label());
+            assert_eq!(
+                s.uses_browser(),
+                matches!(s, Source::Xueqiu | Source::Xiaohongshu)
+            );
         }
     }
 

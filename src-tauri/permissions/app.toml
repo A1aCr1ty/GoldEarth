@@ -65,6 +65,7 @@ commands.allow = [
   "seed_watchlist",
   "set_library_category_agent",
   "show_xianyu_window",
+  "show_trending_source",
   "stock_fund_flow",
   "stock_kline",
   "stock_quote",

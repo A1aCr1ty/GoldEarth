@@ -7,6 +7,7 @@ import {
   Flame,
   RefreshCw,
   Settings2,
+  LogIn,
 } from "lucide-react";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,20 @@ import { cn } from "@/lib/utils";
 import { errText } from "@/lib/errors";
 import { tauri } from "@/lib/tauri";
 import type { HotBoard, HotItem, HotSourceInfo } from "@/types";
+
+export function OpenSourceButton({ source }: { source: HotSourceInfo }) {
+  const [error, setError] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  return <div className="min-w-0">
+    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={opening} onClick={async () => {
+      setOpening(true); setError(null);
+      try { await tauri.showTrendingSource(source.value); }
+      catch (e) { setError(errText(e)); }
+      finally { setOpening(false); }
+    }}><LogIn className="h-3 w-3" />{opening ? "正在打开…" : `打开${source.label}`}</Button>
+    {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
+  </div>;
+}
 
 /**
  * 点条目怎么打开。
@@ -52,10 +67,12 @@ function BoardHeader({
   board,
   loading,
   onRefresh,
+  source,
 }: {
   board: HotBoard;
   loading: boolean;
   onRefresh: () => void;
+  source?: HotSourceInfo;
 }) {
   return (
     <div className="flex h-10 shrink-0 items-center gap-2 border-b px-3">
@@ -65,6 +82,7 @@ function BoardHeader({
         aria-hidden
       />
       <span className="truncate text-sm font-semibold">{board.label}</span>
+      {source?.usesBrowser && <OpenSourceButton source={source} />}
       {board.cached && (
         <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
           缓存
@@ -241,7 +259,7 @@ export function HotBoardCard({
 
   return (
     <section className="flex min-h-[16rem] flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
-      <BoardHeader board={board} loading={loading} onRefresh={onRefresh} />
+      <BoardHeader board={board} loading={loading} onRefresh={onRefresh} source={source} />
 
       {/* 抓取失败但有旧数据兜底时，顶部挂一条提示，不遮内容 */}
       {board.error && !empty && (
@@ -263,6 +281,7 @@ export function HotBoardCard({
           <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
             <AlertCircle className="h-6 w-6 text-muted-foreground" />
             <p className="text-xs leading-relaxed text-muted-foreground">{board.error}</p>
+            {source?.usesBrowser && <p className="text-xs text-muted-foreground">在上方打开平台完成登录，回到推荐首页后刷新；登录状态会保留。</p>}
             <Button size="sm" variant="outline" className="h-7" onClick={onRefresh} disabled={loading}>
               <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} /> 重试
             </Button>

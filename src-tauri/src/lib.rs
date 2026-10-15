@@ -93,6 +93,7 @@ pub fn run() {
             commands::horoscope::horoscope_today,
             commands::trending::trending_sources,
             commands::trending::trending_kinds,
+            commands::trending::show_trending_source,
             commands::trending::trending_boards,
             commands::trending::trending_board,
             commands::reader::open_reader,

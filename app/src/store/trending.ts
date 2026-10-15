@@ -46,9 +46,7 @@ interface TrendingState {
   clearCookie: (value: string) => Promise<void>;
 }
 
-/** 平台 → settings.json 里的 Cookie 字段。
- *  雪球（WAF）和小红书（x-s 签名）都已从后端清单下线，这里保留映射：
- *  哪天恢复，`Source::all()` 加回去就能直接用，Cookie 框和保存逻辑都不用再改 */
+/** 旧 Cookie 设置兼容；网页会话源不再显示手动 Cookie 配置。 */
 const COOKIE_FIELD: Record<string, "xueqiuCookie" | "xiaohongshuCookie"> = {
   xueqiu: "xueqiuCookie",
   xiaohongshu: "xiaohongshuCookie",
@@ -115,31 +113,31 @@ export const useTrending = create<TrendingState>((set, get) => ({
 
   async refresh(source, force = true) {
     const { active, kind } = get();
-    const targets = source ? [source] : active;
+    const targets = (source ? [source] : active).filter((target) => !get().loading[target]);
     if (targets.length === 0) return;
     // 已经在刷的别重复发，手滑连点只留最后一次。
     // 单卡刷新也守这条：force 开着的时候连点就是连着打接口
-    if (targets.some((t) => get().loading[t])) return;
 
     set((s) => ({ loading: markLoading(s.loading, targets, true) }));
-    try {
-      const boards = source
-        ? [await tauri.trendingBoard(source, kind, PAGE_SIZE, force)]
-        : await tauri.trendingBoards(targets, kind, PAGE_SIZE, force);
-
-      set((s) => ({
-        boards: mergeBoards(s.boards, boards),
-        // 单个平台失败已经写进 board.error 了，这里只有整体挂掉才提示
-        error: undefined,
-        lastSync: new Date().toISOString(),
-      }));
-      // Cookie 状态可能变了（比如刚在卡片里配好），同步一下
-      if (boards.some((b) => b.needsCookie)) void refreshSourceMeta();
-    } catch (e) {
-      set({ error: `热榜获取失败：${errText(e)}` });
-    } finally {
-      set((s) => ({ loading: markLoading(s.loading, targets, false) }));
-    }
+    // 每栏独立落地，等待网页登录不会拖住其他平台。
+    const results = await Promise.allSettled(targets.map(async (target) => {
+      try {
+        const board = await tauri.trendingBoard(target, kind, PAGE_SIZE, force);
+        set((s) => ({ boards: mergeBoards(s.boards, [board]) }));
+      } catch (e) {
+        const meta = get().sources.find((s) => s.value === target);
+        set((s) => ({ boards: mergeBoards(s.boards, [{
+          source: target, label: meta?.label ?? target, accent: meta?.accent ?? "#888888",
+          items: [], error: errText(e), needsCookie: false, cached: false, updatedAt: "",
+        }]) }));
+        throw e;
+      } finally {
+        set((s) => ({ loading: markLoading(s.loading, [target], false) }));
+      }
+    }));
+    const failed = results.find((result) => result.status === "rejected");
+    set({ error: failed?.status === "rejected" ? `热榜获取失败：${errText(failed.reason)}` : undefined,
+      lastSync: new Date().toISOString() });
   },
 
   setKind(kind) {
@@ -157,6 +155,7 @@ export const useTrending = create<TrendingState>((set, get) => ({
     set({ active: next });
     // 勾选写进 settings.json，下次进来还是这一批平台
     void persist({ exploreSources: next });
+    if (next.includes(value)) void get().refresh(value, false);
   },
 
   setAutoRefresh(on) {

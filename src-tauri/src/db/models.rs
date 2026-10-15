@@ -278,6 +278,9 @@ pub struct AppSettings {
     /// `Some(vec![])` = 用户主动把四个都取消了——这两种必须分得清，
     /// 否则重进页面会把「我不要看」当成「还没设置」又全勾回来。
     pub explore_sources: Option<Vec<String>>,
+    /// 恢复网页推荐源的一次性迁移标记，之后保留用户的取消选择。
+    #[serde(default)]
+    pub explore_browser_sources_added: bool,
     /// 冲浪页要不要自动刷新。`None` = 没配过，默认开。
     pub explore_auto_refresh: Option<bool>,
 }
@@ -313,6 +316,7 @@ impl Default for AppSettings {
             xiaohongshu_cookie: String::new(),
             xianyu_cookie: String::new(),
             explore_sources: None,
+            explore_browser_sources_added: true,
             explore_auto_refresh: None,
         }
     }
@@ -389,6 +393,14 @@ pub fn normalize_explore_sources(values: Option<Vec<String>>) -> Option<Vec<Stri
 impl AppSettings {
     /// 读盘、落盘前统一过一遍：外观字段按白名单收紧，其余原样
     pub fn normalized(mut self) -> Self {
+        if !self.explore_browser_sources_added {
+            if let Some(sources) = &mut self.explore_sources {
+                if !sources.is_empty() {
+                    sources.extend(["xueqiu".to_string(), "xiaohongshu".to_string()]);
+                }
+            }
+            self.explore_browser_sources_added = true;
+        }
         self.theme = normalize_choice(&self.theme, &THEME_MODES, DEFAULT_THEME);
         self.accent = normalize_choice(&self.accent, &ACCENTS, DEFAULT_ACCENT);
         self.font = normalize_choice(&self.font, &FONTS, DEFAULT_FONT);
@@ -631,5 +643,22 @@ mod tests {
         let partial: AppSettingsPatch =
             serde_json::from_str(r#"{"exploreAutoRefresh":true}"#).unwrap();
         assert_eq!(partial.explore_sources, None, "没传的字段保持 None");
+    }
+
+    #[test]
+    fn restores_browser_sources_once_and_respects_later_opt_out() {
+        let legacy: AppSettings = serde_json::from_str(r#"{"exploreSources":["weibo"]}"#).unwrap();
+        let migrated = legacy.normalized();
+        assert_eq!(
+            migrated.explore_sources.as_ref().unwrap(),
+            &vec!["weibo", "xueqiu", "xiaohongshu"]
+        );
+        assert!(migrated.explore_browser_sources_added);
+        let mut saved: AppSettings =
+            serde_json::from_value(serde_json::to_value(migrated).unwrap()).unwrap();
+        saved.explore_sources = Some(vec!["weibo".into()]);
+        assert_eq!(saved.normalized().explore_sources.unwrap(), vec!["weibo"]);
+        let empty: AppSettings = serde_json::from_str(r#"{"exploreSources":[]}"#).unwrap();
+        assert!(empty.normalized().explore_sources.unwrap().is_empty());
     }
 }

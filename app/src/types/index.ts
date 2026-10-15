@@ -359,6 +359,8 @@ export interface HotSourceInfo {
   needsCookie: boolean;
   /** 用户已经配了 Cookie 吗（不返回 Cookie 内容） */
   cookieReady: boolean;
+  /** 使用应用内网页会话，登录后自动复用 */
+  usesBrowser: boolean;
 }
 
 /** B 站的榜单口径 */
