@@ -412,6 +412,7 @@ export interface PriceTarget {
   name: string;
   /** 搜价关键词，留空就用 name */
   keyword: string;
+  zhuanzhuanUrl?: string;
   note: string;
   createdAt: string;
 }
@@ -440,6 +441,8 @@ export interface TrendPoint {
 /** 首页卡里的一行 */
 export interface PriceOverview {
   target: PriceTarget;
+  source: string;
+  currency: string;
   latest: number | null;
   /** 最新价相对上一条的涨跌幅；只有一条记录时是 null */
   changePct: number | null;
@@ -453,6 +456,15 @@ export interface PriceOverview {
 /** 借 App 自己的 WebView2 搜价的结果 */
 export interface XianyuFetchSummary {
   ok: boolean;
+  needsVerification: boolean;
+  source?: string;
+  currency?: string;
+  sourceUrl?: string;
+  query?: string;
+  method?: string;
+  coverage?: number;
+  sources?: { id: string; name: string; url: string; status: string; message: string; count: number; median: number | null; min: number | null; max: number | null }[];
+  listings?: { title: string; price: number; currency: string; url: string; source?: string; condition?: string }[];
   /** 从响应里认出几个在售价 */
   count: number;
   avg: number | null;

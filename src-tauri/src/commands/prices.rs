@@ -31,6 +31,25 @@ pub fn add_price_target(
 }
 
 #[tauri::command]
+pub fn set_price_zhuanzhuan_url(
+    state: State<'_, AppState>,
+    target_id: String,
+    url: String,
+) -> Result<(), String> {
+    let canonical = if url.trim().is_empty() {
+        String::new()
+    } else {
+        crate::public_prices::zhuanzhuan_url(url.trim())
+            .ok_or("请粘贴转转商品详情分享链接（含 infoId）")?
+            .to_string()
+    };
+    state
+        .storage
+        .set_price_zhuanzhuan_url(&target_id, canonical)
+        .map_err(state_err)
+}
+
+#[tauri::command]
 pub fn remove_price_target(state: State<'_, AppState>, id: String) -> Result<(), String> {
     state.storage.remove_price_target(&id).map_err(state_err)
 }

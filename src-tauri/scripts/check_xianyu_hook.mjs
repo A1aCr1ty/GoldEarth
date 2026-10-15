@@ -25,7 +25,8 @@ function grab(name) {
   return m[1].trim();
 }
 const hook = grab('HOOK_JS');
-const pollJs = grab('POLL_JS');
+const keyword = 'macbook air m5';
+const pollJs = grab('POLL_JS').replace('__XY_KEYWORD_JSON__', JSON.stringify(keyword));
 
 function fail(msg, extra) {
   console.error('\n不通过：' + msg);
@@ -46,6 +47,7 @@ const tree = [];
 function mount(nodes, parent) {
   nodes.forEach((n) => {
     n.parent = parent;
+    n.parentElement = parent;
     tree.push(n);
     mount(n.children, n);
   });
@@ -72,13 +74,20 @@ mount(
       el('¥8,299', [el('8,299')]),
       el('想要 3 人'),
     ]),
-    el('¥1,317.94', [el('¥1,317.94')]),
+    el('MacBook Air M5 ¥1,317.94', [
+      el('MacBook Air M5'),
+      el('¥1,317.94', [el('¥1,317.94')]),
+    ]),
     el('AirPods Pro 2 ¥1.2万 想要 5 人', [
       el('AirPods Pro 2'),
       el('¥1.2万'),
       el('想要 5 人'),
     ]),
-    el('已售 300 件 ¥7,999.00', [el('已售 300 件'), el('¥7,999.00')]),
+    el('MacBook Air M5 已售 300 件 ¥7,999.00', [el('MacBook Air M5'), el('已售 300 件'), el('¥7,999.00')]),
+    el('MacBook Air M5 保护壳 ¥3', [el('MacBook Air M5 保护壳'), el('¥3')]),
+    el('MacBook Air M5 定金 ¥100', [el('MacBook Air M5 定金'), el('¥100')]),
+    el('iPhone 17 ¥4999', [el('iPhone 17'), el('¥4999')]),
+    el('¥2', [el('¥2')]),
   ],
   null,
 );
@@ -143,9 +152,10 @@ if (sent.length !== 0) {
   fail('钩子还在自己 invoke，页面不该发话', sent);
 }
 if (typeof sb.window.__xyScan !== 'function') fail('没有挂上 __xyScan');
+if (sb.window.__xyScan().length !== 0) fail('缺少关键词时不应全页取价');
 
 // ---- 扫价 --------------------------------------------------------------
-const got = sb.window.__xyScan();
+const got = sb.window.__xyScan(keyword);
 console.log('认出价格 =', JSON.stringify(got));
 if (got.length) {
   console.log('均价     =', (got.reduce((a, b) => a + b, 0) / got.length).toFixed(2));
@@ -177,14 +187,24 @@ if (rawResult.raw_ret !== 'SUCCESS::调用成功') fail('ret 未保留中文');
 
 // 必须 clone 响应，钩子读取不能消耗网页自身的 fetch body。
 let cloned = false;
+let responseBody = '{"api":"mtop.taobao.idlemtopsearch.pc.search","ret":["SUCCESS::调用成功"],"data":{"price":123}}';
 const fetchCase = makeSandbox({ querySelectorAll: () => [] }, 'https://www.goofish.com/search?q=x', '');
 fetchCase.sb.__xyHooked = false;
 fetchCase.sb.fetch = () => Promise.resolve({
   text() { fail('钩子消耗了原响应体'); },
-  clone() { cloned = true; return { text: () => Promise.resolve('{"ret":["SUCCESS::调用成功"],"data":{"price":123}}') }; }
+  clone() { cloned = true; return { text: () => Promise.resolve(responseBody) }; }
 });
 vm.runInContext(hook, fetchCase.sb);
-await fetchCase.sb.fetch('https://h5api.m.goofish.com/idlemtopsearch');
+await fetchCase.sb.fetch('https://h5api.m.goofish.com/h5/mtop.taobao.idlemtopsearch.pc.search/1.0/');
 await new Promise(resolve => setImmediate(resolve));
 if (!cloned || !fetchCase.sb.__xyRaw.includes('123')) fail('fetch 响应未完整截获');
-console.log('通过：DOM 去重、拆分价格、原生回调、完整响应、中文、fetch body 均正常。');
+const searchRaw = fetchCase.sb.__xyRaw;
+responseBody = '{"api":"mtop.taobao.idlemtopsearch.pc.search.shade","ret":["SUCCESS::调用成功"],"data":{"price":3}}';
+await fetchCase.sb.fetch('https://h5api.m.goofish.com/h5/mtop.taobao.idlemtopsearch.pc.search.shade/1.0/');
+await new Promise(resolve => setImmediate(resolve));
+if (fetchCase.sb.__xyRaw !== searchRaw) fail('shade 接口覆盖了商品搜索响应');
+responseBody = '{"api":"mtop.taobao.idlemtopsearch.pc.item.search.activate","ret":["SUCCESS::调用成功"],"data":{"price":1}}';
+await fetchCase.sb.fetch('https://h5api.m.goofish.com/h5/mtop.taobao.idlemtopsearch.pc.item.search.activate/1.0/');
+await new Promise(resolve => setImmediate(resolve));
+if (fetchCase.sb.__xyRaw !== searchRaw) fail('辅助接口覆盖了商品搜索响应');
+console.log('通过：关键词匹配、配件/定金过滤、DOM 去重、拆分价格、原生回调、辅助接口隔离、fetch body 均正常。');

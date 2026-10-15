@@ -118,6 +118,16 @@ impl Period {
             Period::Month => "103",
         }
     }
+
+    /// 腾讯复权 K 线接口的周期名；分钟线仍由东方财富提供。
+    pub fn tencent_kline(self) -> Option<(&'static str, &'static str)> {
+        match self {
+            Period::Minute => None,
+            Period::Day => Some(("day", "qfqday")),
+            Period::Week => Some(("week", "qfqweek")),
+            Period::Month => Some(("month", "qfqmonth")),
+        }
+    }
 }
 
 /// 当日分时的一个点

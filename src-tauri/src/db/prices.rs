@@ -26,8 +26,16 @@ pub fn day_of_iso(iso: &str) -> String {
 /// 不压的话同一天的点会在折线上抖成一团毛刺，看不出价格到底是涨了还是跌了。
 /// 用 `BTreeMap` 是因为 key 天然按日期字典序排好，省掉一次排序。
 pub fn build_trend(samples: &[PriceSample], days: i64) -> Vec<TrendPoint> {
+    // Overseas quotes use their original currency. A trend never mixes platforms or currencies.
+    let source = samples
+        .iter()
+        .max_by(|a, b| a.recorded_at.cmp(&b.recorded_at))
+        .map(|s| s.source.as_str());
     let mut buckets: BTreeMap<String, (f64, f64, f64, u32)> = BTreeMap::new();
     for s in samples {
+        if Some(s.source.as_str()) != source {
+            continue;
+        }
         let day = day_of_iso(&s.recorded_at);
         if day.is_empty() {
             continue;
@@ -76,6 +84,13 @@ pub fn build_overview(
 ) -> PriceOverview {
     let mut sorted: Vec<&PriceSample> = samples.iter().collect();
     sorted.sort_by(|a, b| b.recorded_at.cmp(&a.recorded_at));
+    let source = sorted.first().map(|s| s.source.clone()).unwrap_or_default();
+    sorted.retain(|s| s.source == source);
+    let currency = if source.starts_with("ebay:") {
+        source.split(':').nth(1).unwrap_or("USD").to_string()
+    } else {
+        "CNY".to_string()
+    };
 
     let latest = sorted.first().map(|s| round2(s.price));
     let previous = sorted.get(1).map(|s| s.price);
@@ -98,9 +113,11 @@ pub fn build_overview(
 
     PriceOverview {
         target: target.clone(),
+        source,
+        currency,
         latest,
         change_pct,
-        samples: samples.len() as u32,
+        samples: sorted.len() as u32,
         days: trend.len() as u32,
         spark,
         updated_at: sorted.first().map(|s| s.recorded_at.clone()),
@@ -143,6 +160,7 @@ mod tests {
             name: "AirPods Pro2".into(),
             keyword: String::new(),
             note: String::new(),
+            zhuanzhuan_url: String::new(),
             created_at: "2026-10-01T00:00:00+00:00".into(),
         }
     }
@@ -156,6 +174,29 @@ mod tests {
             samples: 1,
             recorded_at: at.into(),
         }
+    }
+
+    #[test]
+    fn platforms_and_currencies_have_independent_history() {
+        let mut old = sample(178.82, "2026-10-15T08:00:00+00:00");
+        old.source = "xianyu".into();
+        let mut usd = sample(299.99, "2026-10-15T09:00:00+00:00");
+        usd.source = "ebay:USD".into();
+        let rows = vec![old, usd];
+        let o = build_overview(&target(), &rows, 7);
+        assert_eq!(o.source, "ebay:USD");
+        assert_eq!(o.currency, "USD");
+        assert_eq!(o.latest, Some(299.99));
+        assert_eq!(o.change_pct, None);
+        assert_eq!(o.samples, 1);
+        assert_eq!(build_trend(&rows, 0)[0].avg, 299.99);
+        let mut hkd = sample(2346.67, "2026-10-15T10:00:00+00:00");
+        hkd.source = "ebay:HKD".into();
+        let mut rows = rows;
+        rows.push(hkd);
+        assert_eq!(build_overview(&target(), &rows, 7).currency, "HKD");
+        assert_eq!(build_trend(&rows, 0)[0].avg, 2346.67);
+        assert_eq!(rows.len(), 3, "Previous sources remain stored");
     }
 
     #[test]

@@ -12,9 +12,8 @@ interface PricesState {
   trendLoading: boolean;
   /** 记价 / 搜价的即时反馈 */
   notice: string | null;
-  probe: XianyuFetchSummary | null;
+  results: Record<string, XianyuFetchSummary>;
   probing: boolean;
-  probeTargetId: string | null;
   /** 正在抓的是哪一件，列表里那行才能显示「正在搜…」 */
   probingFor: string | null;
   /** 「全部查一遍」的进度 */
@@ -23,8 +22,7 @@ interface PricesState {
 
   refresh: () => Promise<void>;
   select: (id: string | null) => Promise<void>;
-  /** 只重载趋势，不碰 probe / notice —— 抓价成功后刷新曲线要用它，
-   *  走 select() 的话会把刚显示出来的抓价结果一起清掉（踩过） */
+  /** 只重载趋势，保留每件物品的查询结果。 */
   reloadTrend: (id: string) => Promise<void>;
   add: (input: { name: string; keyword?: string; note?: string }) => Promise<PriceTarget>;
   remove: (id: string) => Promise<void>;
@@ -43,9 +41,8 @@ export const usePrices = create<PricesState>((set, get) => ({
   trend: [],
   trendLoading: false,
   notice: null,
-  probe: null,
+  results: {},
   probing: false,
-  probeTargetId: null,
   probingFor: null,
   refreshingAll: false,
   progress: null,
@@ -67,10 +64,10 @@ export const usePrices = create<PricesState>((set, get) => ({
 
   async select(id) {
     if (id === null) {
-      set({ selectedId: null, trend: [], probe: null, notice: null });
+      set({ selectedId: null, trend: [], notice: null });
       return;
     }
-    set({ selectedId: id, trend: [], probe: null, trendLoading: true, notice: null });
+    set({ selectedId: id, trend: [], trendLoading: true, notice: null });
     await get().reloadTrend(id);
   },
 
@@ -95,30 +92,40 @@ export const usePrices = create<PricesState>((set, get) => ({
   async remove(id) {
     await tauri.removePriceTarget(id);
     if (get().selectedId === id) {
-      set({ selectedId: null, trend: [], probe: null });
+      set({ selectedId: null, trend: [] });
     }
+    set((state) => {
+      const results = { ...state.results };
+      delete results[id];
+      return { results };
+    });
     await get().refresh();
   },
 
   async runProbe(targetId) {
     if (get().probing || get().refreshingAll) return;
-    set({ probing: true, probingFor: targetId, probeTargetId: targetId, probe: null, notice: null });
+    set({ probing: true, probingFor: targetId, notice: null });
     try {
-      const probe = await tauri.fetchXianyuPrice(targetId);
-      set({ probing: false, probingFor: null, probe });
-      // 抓到了就刷新列表和趋势，均价已经落库了。
-      // 这里必须走 reloadTrend 而不是 select()：select() 会把 probe 清掉，
-      // 结果框刚显示就被抹掉，看起来像「点了没反应」
+      const probe = await tauri.fetchPublicPrice(targetId);
+      set((state) => ({
+        probing: false,
+        probingFor: null,
+        results: { ...state.results, [targetId]: probe },
+      }));
+      // 只有成功落库的查询才刷新历史价格和趋势。
       if (probe.ok) {
         await get().refresh();
         if (get().selectedId === targetId) await get().reloadTrend(targetId);
       }
     } catch (e) {
-      set({
+      set((state) => ({
         probing: false,
         probingFor: null,
-        probe: { ok: false, count: 0, avg: null, min: null, max: null, ret: "", message: String(e) },
-      });
+        results: {
+          ...state.results,
+          [targetId]: { ok: false, needsVerification: false, count: 0, avg: null, min: null, max: null, ret: "", message: String(e) },
+        },
+      }));
     }
   },
 
@@ -126,14 +133,26 @@ export const usePrices = create<PricesState>((set, get) => ({
     if (get().probing || get().refreshingAll) return;
     const targets = get().items;
     if (targets.length === 0) return;
-    set({ refreshingAll: true, probe: null, error: undefined, progress: { done: 0, total: targets.length } });
+    set({ refreshingAll: true, error: undefined, progress: { done: 0, total: targets.length } });
     const failed: string[] = [];
     for (const [i, row] of targets.entries()) {
       set({ probingFor: row.target.id });
       try {
-        const r = await tauri.fetchXianyuPrice(row.target.id);
+        const r = await tauri.fetchPublicPrice(row.target.id);
+        set((state) => ({ results: { ...state.results, [row.target.id]: r } }));
         if (!r.ok) failed.push(`${row.target.name}：${r.message.split("\n")[0]}`);
+        if (r.needsVerification) {
+          const remaining = targets.length - i - 1;
+          if (remaining > 0) failed.push(`批量查询已暂停，另有 ${remaining} 件尚未查询`);
+          break;
+        }
       } catch (e) {
+        set((state) => ({
+          results: {
+            ...state.results,
+            [row.target.id]: { ok: false, needsVerification: false, count: 0, avg: null, min: null, max: null, ret: "", message: String(e) },
+          },
+        }));
         failed.push(`${row.target.name}：${String(e)}`);
       }
       set({ progress: { done: i + 1, total: targets.length } });
@@ -142,8 +161,7 @@ export const usePrices = create<PricesState>((set, get) => ({
     await get().refresh();
     const sel = get().selectedId;
     if (sel) await get().reloadTrend(sel);
-    // 失败的单独说一句：全查一遍时只有最后一件事的结果留在详情页里，
-    // 中间几件失败就悄悄过去了，用户会以为全都成功了
+    // 每件物品保留自己的结果，页头汇总本轮失败和暂停原因。
     set({
       error:
         failed.length === 0

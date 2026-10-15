@@ -442,6 +442,7 @@ impl Storage {
             name: trimmed,
             keyword: keyword.trim().to_string(),
             note: note.trim().to_string(),
+            zhuanzhuan_url: String::new(),
             created_at: now_iso(),
         };
         self.cols.price_targets.lock().push(target.clone());
@@ -450,6 +451,24 @@ impl Storage {
             &self.cols.price_targets.lock(),
         )?;
         Ok(target)
+    }
+
+    pub fn set_price_zhuanzhuan_url(&self, id: &str, url: String) -> Result<()> {
+        let mut targets = self.cols.price_targets.lock();
+        let target = targets
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or_else(|| StorageError::Invalid("物品不存在".into()))?;
+        let previous = std::mem::replace(&mut target.zhuanzhuan_url, url);
+        if let Err(error) = self.save(&self.data_dir.join(PRICE_TARGETS_FILE), &*targets) {
+            targets
+                .iter_mut()
+                .find(|t| t.id == id)
+                .unwrap()
+                .zhuanzhuan_url = previous;
+            return Err(error);
+        }
+        Ok(())
     }
 
     /// 删物品时连它的价格记录一起删：留着就成了没人认领的孤儿行，
@@ -546,9 +565,9 @@ impl Storage {
 
     /// 把闲鱼那次的原始响应落到 `data/xianyu_last_response.json`。
     ///
-    /// 这份 JSON 的结构至今没被验证过（Rust 直连拿不到，浏览器那边拿不到响应体），
-    /// 所以先把原文存下来：等第一次真跑通，就能对着真实结构把
-    /// `xianyu_webview::extract_prices` 的宽口径收窄，并把测试换成实抓样本。
+    /// 闲鱼页面会请求搜索结果以外的辅助接口（例如搜索词提示），它们也可能返回
+    /// `SUCCESS`，但不含商品列表。保留最近一次响应，便于辨别采到的是哪类接口，
+    /// 并据此校正 `xianyu_webview::extract_prices`。
     ///
     /// 写失败只打日志：存个调试文件不该让整次抓价跟着失败。
     pub fn dump_xianyu_response(&self, raw: &str) -> Result<()> {

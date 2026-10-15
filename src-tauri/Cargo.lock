@@ -1229,6 +1229,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "encoding_rs",
  "once_cell",
  "parking_lot",
  "reqwest 0.12.28",

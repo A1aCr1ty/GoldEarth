@@ -21,7 +21,67 @@
 //! ```
 
 use super::symbol;
-use super::types::{OrderLevel, Quote};
+use super::types::{Candle, OrderLevel, Period, Quote};
+use serde_json::Value;
+
+/// 解析腾讯前复权 K 线。每行字段为日期、开盘、收盘、最高、最低、成交量，
+/// 部分周期还会附带成交额。涨跌与振幅由前一根收盘价计算。
+pub fn parse_klines(json: &Value, code: &str, period: Period) -> Vec<Candle> {
+    let Some((_, key)) = period.tencent_kline() else {
+        return Vec::new();
+    };
+    let Some(rows) = json
+        .get("data")
+        .and_then(|d| d.get(code))
+        .and_then(|d| d.get(key))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+
+    let mut out: Vec<Candle> = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Some(fields) = row.as_array() else { continue };
+        if fields.len() < 6 {
+            continue;
+        }
+        let Some(date) = fields.first().and_then(Value::as_str) else {
+            continue;
+        };
+        let number = |i: usize| {
+            fields
+                .get(i)
+                .and_then(|v| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+                .unwrap_or(0.0)
+        };
+        let open = number(1);
+        let close = number(2);
+        let high = number(3);
+        let low = number(4);
+        let previous = out.last().map(|c| c.close).unwrap_or(0.0);
+        let change = if previous > 0.0 { close - previous } else { 0.0 };
+        let change_pct = if previous > 0.0 { change / previous * 100.0 } else { 0.0 };
+        let amplitude = if previous > 0.0 {
+            (high - low) / previous * 100.0
+        } else {
+            0.0
+        };
+        out.push(Candle {
+            date: date.to_string(),
+            open,
+            close,
+            high,
+            low,
+            volume: number(5),
+            amount: number(6),
+            amplitude,
+            change_pct,
+            change,
+            turnover: 0.0,
+        });
+    }
+    out
+}
 
 /// 按下标取数值，越界或空串都当 0
 fn num(fields: &[&str], idx: usize) -> f64 {

@@ -56,22 +56,20 @@ fn client() -> &'static reqwest::Client {
     &CLIENT
 }
 
-/// 腾讯返回 GBK，这里只解码 ASCII 部分——中文名称会变成乱码占位，
-/// 但真正要用的数字字段全是 ASCII，不受影响。名称改用东方财富的榜单接口补。
+/// 腾讯返回 GBK；按原始字节解码，行情数据源断开时也能保留中文名称。
 async fn fetch_tencent(codes: &[String]) -> Result<String, String> {
     let q = codes.join(",");
-    let text = client()
+    let bytes = client()
         .get(format!("https://qt.gtimg.cn/q={q}"))
         .header("Referer", "https://gu.qq.com/")
         .send()
         .await
         .map_err(|e| format!("腾讯行情请求失败：{e}"))?
-        .text()
+        .bytes()
         .await
         .map_err(|e| format!("腾讯行情读取失败：{e}"))?;
-    // 只保留 ASCII 可解析的行；非 ASCII 字节会让 UTF-8 解码整体失败，
-    // 所以逐字节过滤后再交给解析器。
-    Ok(text)
+    let (text, _, _) = encoding_rs::GBK.decode(&bytes);
+    Ok(text.into_owned())
 }
 
 async fn fetch_json(url: &str) -> Result<serde_json::Value, String> {
@@ -130,7 +128,7 @@ pub async fn quotes(codes: &[String]) -> Result<Vec<Quote>, String> {
     let mut all: Vec<Quote> = Vec::new();
     for chunk in normalized.chunks(30) {
         let raw = fetch_tencent(chunk).await?;
-        let parsed = tencent::parse_quotes(&sanitize_tencent(&raw));
+        let parsed = tencent::parse_quotes(&raw);
         all.extend(parsed);
     }
     if all.is_empty() {
@@ -150,15 +148,6 @@ pub async fn quotes(codes: &[String]) -> Result<Vec<Quote>, String> {
 
 fn parse_cached_quotes(v: &serde_json::Value) -> Vec<Quote> {
     serde_json::from_value(v.clone()).unwrap_or_default()
-}
-
-/// 腾讯响应是 GBK，其中中文名称会让整体 UTF-8 解码失败。
-/// 这里把非 ASCII 字节替换成 `?`——名称会变成 `?????`，
-/// 但所有数字字段完好。名称由 `enrich_names` 用东财补齐。
-fn sanitize_tencent(raw: &str) -> String {
-    raw.chars()
-        .map(|c| if c.is_ascii() { c } else { '\u{fffd}' })
-        .collect()
 }
 
 /// 用东方财富的接口补齐中文名称（腾讯那条路的名称是乱码）
@@ -217,15 +206,53 @@ pub async fn kline(code: &str, period: Period, limit: usize) -> Result<Vec<Candl
         period.klt(),
         limit.clamp(30, 5000)
     );
-    let v = fetch_json(&url).await?;
-    let candles = eastmoney::parse_klines(&v);
-    if candles.is_empty() {
-        return Err("没有取到 K 线数据".into());
-    }
+    let (candles, eastmoney_error) = match fetch_json(&url).await {
+        Ok(v) => (eastmoney::parse_klines(&v), None),
+        Err(e) => (Vec::new(), Some(e)),
+    };
+    let candles = if candles.is_empty() {
+        match fetch_tencent_klines(&normalized, period, limit).await {
+            Ok(fallback) if !fallback.is_empty() => fallback,
+            Ok(_) => return Err("东方财富和腾讯都没有返回 K 线数据".into()),
+            Err(fallback_error) => {
+                return Err(format!(
+                    "{}；腾讯备用 K 线也失败：{fallback_error}",
+                    eastmoney_error
+                        .unwrap_or_else(|| "东方财富没有返回 K 线数据".into())
+                ));
+            }
+        }
+    } else {
+        candles
+    };
     if let Ok(serialized) = serde_json::to_value(&candles) {
         cache_put(&key, &serialized);
     }
     Ok(candles)
+}
+
+async fn fetch_tencent_klines(
+    code: &str,
+    period: Period,
+    limit: usize,
+) -> Result<Vec<Candle>, String> {
+    let Some((period_name, _)) = period.tencent_kline() else {
+        return Err("腾讯备用接口不提供分钟 K 线".into());
+    };
+    let url = format!(
+        "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={code},{period_name},,,{},qfq",
+        limit.clamp(30, 500)
+    );
+    let data = client()
+        .get(&url)
+        .header("Referer", "https://gu.qq.com/")
+        .send()
+        .await
+        .map_err(|e| format!("腾讯 K 线请求失败：{e}"))?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("腾讯 K 线响应解析失败：{e}"))?;
+    Ok(tencent::parse_klines(&data, code, period))
 }
 
 /// 当日分时
@@ -318,11 +345,11 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_keeps_digits_and_drops_chinese() {
-        let raw = "v_sh600519=\"1~贵州茅台~600519~1278.02\";";
-        let cleaned = sanitize_tencent(raw);
-        assert!(cleaned.contains("1278.02"), "数字必须保留");
-        assert!(!cleaned.contains('贵'), "中文必须被替换掉");
+    fn decodes_tencent_gbk_names() {
+        let (raw, _, _) = encoding_rs::GBK.encode("v_sh600519=\"1~贵州茅台~600519~1278.02\";");
+        let decoded = encoding_rs::GBK.decode(&raw).0;
+        assert!(decoded.contains("贵州茅台"), "GBK 中文名称必须正确解码");
+        assert!(decoded.contains("1278.02"), "数字必须保留");
     }
 
     #[tokio::test]

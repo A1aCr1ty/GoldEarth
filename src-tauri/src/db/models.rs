@@ -147,6 +147,8 @@ pub struct PriceTarget {
     pub keyword: String,
     #[serde(default)]
     pub note: String,
+    #[serde(default)]
+    pub zhuanzhuan_url: String,
     #[serde(alias = "created_at")]
     pub created_at: String,
 }
@@ -189,6 +191,8 @@ pub struct TrendPoint {
 #[serde(rename_all = "camelCase")]
 pub struct PriceOverview {
     pub target: PriceTarget,
+    pub source: String,
+    pub currency: String,
     /// 最近一次的均价
     pub latest: Option<f64>,
     /// 最新价相对上一条的涨跌幅；只有一条记录时算不出来

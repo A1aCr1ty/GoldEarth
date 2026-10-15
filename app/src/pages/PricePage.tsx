@@ -12,8 +12,7 @@ import { usePrices } from "@/store/prices";
  * 单独一页而不是塞进首页：首页是天气/日历/推送，一天看一次；
  * 这个是「过几天回来看一眼跌到多少没有」，节奏完全不同，混在一起反而互相挤。
  *
- * 价格只有一个来路：App 自己的 WebView2 去闲鱼搜均价。
- * 手动录入已经去掉——「每隔几天手填一次」听着就不可能坚持。
+ * 读取公开二手报价，并按来源、币种记录样本均价。
  */
 export default function PricePage() {
   const s = usePrices();
@@ -44,7 +43,7 @@ export default function PricePage() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold">价格追踪</h1>
           <p className="text-[0.6875rem] text-muted-foreground">
-            盯几件想买的东西，闲鱼的当天在售均价自动记下来，走势自己长出来
+            对照国内二手平台的人民币在售报价，展示来源覆盖、成色与样本明细
           </p>
         </div>
 
@@ -60,7 +59,7 @@ export default function PricePage() {
             className="h-7 gap-1 px-2 text-xs"
             onClick={() => void s.refreshAll()}
             disabled={s.refreshingAll || s.probing}
-            title="挨个去闲鱼搜一遍，逐件记均价"
+            title="依次查询国内公开二手报价，逐件记录参考价"
           >
             <RefreshCw className={s.refreshingAll ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
             全部查一遍

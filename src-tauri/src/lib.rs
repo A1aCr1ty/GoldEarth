@@ -3,6 +3,7 @@ mod commands;
 mod db;
 mod horoscope;
 mod market;
+mod public_prices;
 mod trending;
 mod weather;
 mod xianyu_webview;
@@ -99,11 +100,13 @@ pub fn run() {
             commands::reader::open_reader,
             commands::prices::list_price_targets,
             commands::prices::add_price_target,
+            commands::prices::set_price_zhuanzhuan_url,
             commands::prices::remove_price_target,
             commands::prices::list_price_samples,
             commands::prices::price_trend,
             commands::prices::price_overview,
             commands::prices::fetch_xianyu_price,
+            public_prices::fetch_public_price,
             commands::prices::show_xianyu_window,
         ])
         .run(tauri::generate_context!())

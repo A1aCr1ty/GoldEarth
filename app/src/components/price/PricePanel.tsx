@@ -1,9 +1,7 @@
 /**
  * 价格追踪的主体：左边一列盯着的物品，右边选中那件的详情。
  *
- * 价格**只有**一个来路——App 自己的 WebView2 去闲鱼搜（见后端
- * `xianyu_webview.rs`）。之前的手动录入已经去掉了：
- * 「每隔几天回来手填一次」听着就不可能坚持下来，等于没有。
+ * 对照国内平台的公开在售样本，明确区分有效来源与未接入/受限来源。
  *
  * 拿不到数的时候界面必须说清楚是哪一环断了（被风控拦 / 要登录 /
  * 结构变了认不出价格），而不是留一个空卡片让人猜。
@@ -14,15 +12,36 @@ import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
+import { open as openUrl } from "@tauri-apps/plugin-shell";
 // echarts 6 里 EChartsOption 只在主入口导出，core 里叫 EChartsCoreOption
 import type { EChartsOption } from "echarts";
 import { RefreshCw, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { tauri } from "@/lib/tauri";
 import { UP, DOWN, FLAT, colorOf, fixed, signed } from "@/lib/format";
 import { scalePx, useUiScaleValue } from "@/lib/uiScale";
 import { errText } from "@/lib/errors";
 import { usePrices } from "@/store/prices";
 import type { PriceOverview, TrendPoint } from "@/types";
+
+function money(value: number | null, currency = "CNY") {
+  return `${currency === "CNY" ? "¥" : currency + " "}${fixed(value)}`;
+}
+
+function sourceName(source: string) {
+  if (source?.startsWith("domestic:v1:")) {
+    const names: Record<string, string> = { nine: "九机良品", xianyu: "闲鱼", jd: "京东二手", zhuanzhuan: "转转" };
+    const platforms = source.slice("domestic:v1:".length).split("+").filter(Boolean);
+    return `${platforms.length > 1 ? "国内多平台" : "单平台参考"} · ${platforms.map(id => names[id] || id).join(" / ")}`;
+  }
+  if (source?.startsWith("ebay:")) return "eBay 公开二手";
+  return source === "xianyu" ? "闲鱼历史" : source === "manual" ? "手动记录" : "历史记录";
+}
+
+function openSource(url: string) {
+  void openUrl(url).catch((e) => window.alert(`打开来源失败：${errText(e)}`));
+}
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
@@ -33,7 +52,7 @@ export function PricePanel() {
   if (s.items.length === 0) {
     return (
       <p className="py-10 text-center text-xs text-muted-foreground">
-        还没有盯着的东西。加一个之后，点「去闲鱼查价」就会自动把当天的在售均价记进趋势。
+        加一件想关注的物品，再点「国内比价」，查询国内公开二手报价并核对平台与样本。
       </p>
     );
   }
@@ -80,6 +99,8 @@ function Row({
   onSelect: () => void;
 }) {
   const remove = usePrices((s) => s.remove);
+  const result = usePrices((s) => s.results[row.target.id]);
+  const failed = result !== undefined && !result.ok;
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -92,15 +113,20 @@ function Row({
         onClick={onSelect}
       >
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-2">
             <span className="truncate text-sm font-medium">{row.target.name}</span>
-            {row.changePct !== null && (
+            {!failed && row.changePct !== null && (
               <span className="shrink-0 text-xs tabular-nums" style={{ color: colorOf(row.changePct) }}>
                 {signed(row.changePct, 1)}
               </span>
             )}
           </div>
-          <div className="flex items-baseline gap-2">
+          {failed && !busy && (
+            <p className="mt-0.5 text-[0.6875rem] text-amber-600 dark:text-amber-400">
+              本次未更新{result.needsVerification ? " · 待登录或验证" : " · 查询失败"}
+            </p>
+          )}
+          <div className="flex flex-wrap items-baseline gap-2">
             {busy ? (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <RefreshCw className="h-3 w-3 animate-spin" /> 正在搜…
@@ -111,7 +137,8 @@ function Row({
               <span className="text-xs text-muted-foreground">还没抓到价 · 点它去搜</span>
             ) : (
               <>
-                <span className="text-lg font-semibold tabular-nums">¥{fixed(row.latest)}</span>
+                <span className="text-[0.625rem] text-muted-foreground">上次记录</span>
+                <span className={`text-lg font-semibold tabular-nums ${failed ? "text-muted-foreground" : ""}`}>{money(row.latest, row.currency)}</span>
                 <Spark values={row.spark} />
                 <span className="text-[0.625rem] text-muted-foreground">
                   {row.samples} 次 · {row.days} 天
@@ -119,6 +146,9 @@ function Row({
               </>
             )}
           </div>
+          {row.latest !== null && (
+            <p className="mt-0.5 text-[0.625rem] text-muted-foreground">{sourceName(row.source)} · {row.currency || "CNY"}</p>
+          )}
         </div>
 
         {/* 删除要按两下：点一次变成「确定？」，避免手滑把盯了几个月的东西删掉 */}
@@ -201,10 +231,30 @@ function Detail({ targetId }: { targetId: string }) {
   const trend = usePrices((s) => s.trend);
   const loading = usePrices((s) => s.trendLoading);
   const probeRun = usePrices((s) => s.runProbe);
-  const showXianyu = usePrices((s) => s.showXianyu);
-  const probe = usePrices((s) => s.probeTargetId === targetId ? s.probe : null);
+  const probe = usePrices((s) => s.results[targetId]);
+  const row = usePrices((s) => s.items.find((item) => item.target.id === targetId));
+  const querying = usePrices((s) => s.probingFor === targetId);
   const refreshingAll = usePrices((s) => s.refreshingAll);
   const probing = usePrices((s) => s.probing);
+  const currency = row?.currency || "CNY";
+  const sourceUrl = probe?.sourceUrl || `https://m2.9ji.com/search?keyword=${encodeURIComponent(row?.target.keyword || row?.target.name || "")}&searchType=3`;
+  const [shareUrl, setShareUrl] = useState("");
+  const [savingSource, setSavingSource] = useState(false);
+  const [sourceError, setSourceError] = useState("");
+  useEffect(() => {
+    setShareUrl(row?.target.zhuanzhuanUrl || "");
+    setSourceError("");
+  }, [targetId, row?.target.zhuanzhuanUrl]);
+  async function saveSource() {
+    setSavingSource(true);
+    setSourceError("");
+    try {
+      await tauri.setPriceZhuanzhuanUrl(targetId, shareUrl.trim());
+      await usePrices.getState().refresh();
+      await probeRun(targetId);
+    } catch (e) { setSourceError(errText(e)); }
+    finally { setSavingSource(false); }
+  }
 
   async function handleProbe() {
     try {
@@ -221,34 +271,52 @@ function Detail({ targetId }: { targetId: string }) {
         <div className="flex h-56 items-center justify-center text-xs text-muted-foreground">正在算趋势…</div>
       ) : trend.length === 0 ? (
         <p className="py-6 text-center text-xs text-muted-foreground">
-          还没有价格记录。点下面的「去闲鱼查价」，App 会自己去闲鱼搜当天的在售均价。
+          还没有价格记录。点击「国内比价」，查看各平台实际可取得的人民币在售报价。
         </p>
       ) : (
-        <div className="flex h-56 flex-col">
-          <TrendChart points={trend} />
+        <div>
+          <p className="mb-2 text-[0.6875rem] text-muted-foreground">
+            {sourceName(row?.source || "")} · {currency} · 历史参考价
+            {row?.updatedAt && ` · 上次记录于 ${new Date(row.updatedAt).toLocaleString("zh-CN")}`}
+          </p>
+          <div className="flex h-56 flex-col">
+            <TrendChart points={trend} currency={currency} />
+          </div>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" className="h-8 gap-1" onClick={() => void handleProbe()} disabled={probing || refreshingAll}>
-          <Search className={probing ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
-          {probing ? "正在搜…" : "去闲鱼查价"}
+          <Search className={querying ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+          {querying ? "正在对照各平台…" : "国内比价"}
         </Button>
         <Button
           size="sm"
           variant="ghost"
           className="h-8 shrink-0 text-xs"
-          onClick={() => void showXianyu().catch((e) => window.alert(`打开闲鱼失败：${errText(e)}`))}
-          title="把抓价用的那扇浏览器窗口亮出来。闲鱼要求登录时在这里登一次，之后就一直复用"
+          onClick={() => openSource(sourceUrl)}
+          title="打开公开报价的搜索来源页"
         >
-          打开闲鱼
+          查看报价来源
         </Button>
         <span className="text-[0.6875rem] text-muted-foreground">
-          每次查价会记一个均价；多记几天才有走势
+          只采国内在售整机；配置与成色见样本，来源缺失会明确提示
         </span>
       </div>
 
-      {probe && (
+      <div className="space-y-2 rounded border p-2">
+        <label htmlFor={`zz-source-${targetId}`} className="text-xs font-medium">转转商品分享链接</label>
+        <div className="flex flex-wrap gap-2">
+          <Input id={`zz-source-${targetId}`} className="h-8 min-w-0 flex-1 text-xs" value={shareUrl}
+            onChange={e => setShareUrl(e.target.value)} placeholder="粘贴含 infoId 的转转商品详情链接" disabled={savingSource || probing || refreshingAll} />
+          <Button size="sm" variant="outline" className="h-8" onClick={() => void saveSource()}
+            disabled={savingSource || probing || refreshingAll}>{savingSource ? "正在更新…" : "保存并查价"}</Button>
+        </div>
+        <p className="text-[0.6875rem] text-muted-foreground">保存一次后随查价更新，无需登录。逐页核对同款商品；不足 3 条仅展示，不纳入综合价。清空并保存可解除绑定。</p>
+        {sourceError && <p className="text-xs text-destructive">{sourceError}</p>}
+      </div>
+
+      {probe && !querying && (
         <div
           className={
             probe.ok
@@ -264,13 +332,50 @@ function Detail({ targetId }: { targetId: string }) {
               <p className={`whitespace-pre-line break-words ${probe.ok ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
                 {probe.message}
               </p>
+              {probe.query && <p className="mt-1 text-muted-foreground">检索词：{probe.query}</p>}
               {probe.ok && (
                 <p className="mt-1 text-muted-foreground">
-                  均价 <b className="tabular-nums">¥{fixed(probe.avg)}</b>，区间 ¥{fixed(probe.min)} ~ ¥{fixed(probe.max)}
-                  ，共 {probe.count} 条在售
+                  参考价 <b className="tabular-nums">{money(probe.avg, probe.currency)}</b>，样本区间 {money(probe.min, probe.currency)} ~ {money(probe.max, probe.currency)}
+                  ，来源 {probe.source || "公开报价"}，共 {probe.count} 条
                 </p>
               )}
-              {probe.ret && <p className="mt-1 break-all font-mono text-[0.625rem] text-muted-foreground">ret: {probe.ret}</p>}
+              {probe.method && <p className="mt-1 text-muted-foreground">计算方式：{probe.method}；来源组合变化时单独记录趋势。</p>}
+              {!!probe.sources?.length && (
+                <div className="mt-3 space-y-2">
+                  <p className="font-medium">平台覆盖：{probe.coverage || 0} / {probe.sources.length} 个来源取得足够样本</p>
+                  {probe.sources.map(source => (
+                    <div key={source.id} className="rounded border border-border/70 p-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <button className="font-medium underline" onClick={() => openSource(source.url)}>{source.name}</button>
+                        <span>{source.status === "ok" ? `${source.count} 条 · 中位数 ¥${fixed(source.median)}` : "未参与计算"}</span>
+                      </div>
+                      <p className="mt-1 text-[0.6875rem] text-muted-foreground">{source.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!!probe.listings?.length && (
+                <details className="mt-2 text-muted-foreground">
+                  <summary className="cursor-pointer">查看本次 {probe.listings.length} 条商品样本</summary>
+                  <ul className="mt-2 space-y-2">
+                    {probe.listings.map((item) => (
+                      <li key={item.url} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <button className="text-left underline hover:text-foreground" onClick={() => openSource(item.url)}>{item.title}</button>
+                          <p className="mt-0.5 text-[0.6875rem]">{probe.sources?.find(s => s.id === item.source)?.name || item.source || probe.source}{item.condition && ` · ${item.condition}`}</p>
+                        </div>
+                        <span className="shrink-0 tabular-nums">{money(item.price, item.currency)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {probe.ret && (
+                <details className="mt-2 text-[0.625rem] text-muted-foreground">
+                  <summary className="cursor-pointer">查看响应详情</summary>
+                  <p className="mt-1 break-all font-mono">{probe.ret}</p>
+                </details>
+              )}
             </div>
           </div>
         </div>
@@ -280,7 +385,7 @@ function Detail({ targetId }: { targetId: string }) {
 }
 
 /** 均价折线 + 每天的最低/最高带 */
-function TrendChart({ points }: { points: TrendPoint[] }) {
+function TrendChart({ points, currency }: { points: TrendPoint[]; currency: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
   const scale = useUiScaleValue();
@@ -303,13 +408,13 @@ function TrendChart({ points }: { points: TrendPoint[] }) {
       chart.current.clear();
       return;
     }
-    chart.current.setOption(build(points, scale), true);
-  }, [points, scale]);
+    chart.current.setOption(build(points, scale, currency), true);
+  }, [points, scale, currency]);
 
   return <div ref={ref} className="min-h-0 flex-1" />;
 }
 
-function build(points: TrendPoint[], scale: number): EChartsOption {
+function build(points: TrendPoint[], scale: number, currency: string): EChartsOption {
   const s = (px: number) => scalePx(px, scale);
   const days = points.map((p) => p.day.slice(5));
   const avg = points.map((p) => p.avg);
@@ -321,7 +426,7 @@ function build(points: TrendPoint[], scale: number): EChartsOption {
 
   return {
     animation: false,
-    grid: { left: s(52), right: s(16), top: s(12), bottom: s(22) },
+    grid: { left: s(currency === "CNY" ? 52 : 80), right: s(16), top: s(12), bottom: s(22) },
     tooltip: {
       trigger: "axis",
       backgroundColor: "rgba(22,26,35,0.94)",
@@ -333,8 +438,8 @@ function build(points: TrendPoint[], scale: number): EChartsOption {
         if (!p) return "";
         return [
           `<div style="font-weight:600">${p.day}</div>`,
-          `均价 ¥${fixed(p.avg)}`,
-          `区间 ¥${fixed(p.min)} ~ ¥${fixed(p.max)}`,
+          `参考价 ${money(p.avg, currency)}`,
+          `区间 ${money(p.min, currency)} ~ ${money(p.max, currency)}`,
           `记了 ${p.count} 次`,
         ].join("<br/>");
       },
@@ -352,7 +457,7 @@ function build(points: TrendPoint[], scale: number): EChartsOption {
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: "#262b38" } },
-      axisLabel: { color: "#8b93a7", fontSize: s(10), formatter: (v: number) => `¥${v}` },
+      axisLabel: { color: "#8b93a7", fontSize: s(10), formatter: (v: number) => `${currency === "CNY" ? "¥" : currency + " "}${v}` },
     },
     series: [
       {

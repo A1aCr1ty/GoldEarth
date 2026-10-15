@@ -75,12 +75,14 @@ export const tauri = {
   openReader(url: string, title?: string) { return invoke<void>("open_reader", { url, title: title ?? null }); },
   // ===== 价格追踪 =====
   listPriceTargets() { return invoke<import("@/types").PriceTarget[]>("list_price_targets"); },
+  setPriceZhuanzhuanUrl(targetId: string, url: string) { return invoke<void>("set_price_zhuanzhuan_url", { targetId, url }); },
   addPriceTarget(input: { name: string; keyword?: string; note?: string }) { return invoke<import("@/types").PriceTarget>("add_price_target", { name: input.name, keyword: input.keyword ?? null, note: input.note ?? null }); },
   removePriceTarget(id: string) { return invoke<void>("remove_price_target", { id }); },
   listPriceSamples(targetId: string) { return invoke<import("@/types").PriceSample[]>("list_price_samples", { targetId }); },
   /** 趋势图数据；days 传 0 表示不限 */
   priceTrend(targetId: string, days?: number) { return invoke<import("@/types").TrendPoint[]>("price_trend", { targetId, days: days ?? null }); },
   priceOverview(sparkDays?: number) { return invoke<import("@/types").PriceOverview[]>("price_overview", { sparkDays: sparkDays ?? null }); },
+  fetchPublicPrice(targetId: string) { return invoke<import("@/types").XianyuFetchSummary>("fetch_public_price", { targetId }); },
   /** 借 App 自己的 WebView2 搜价：比直连靠谱，风控认的是浏览器指纹 */
   fetchXianyuPrice(targetId: string) { return invoke<import("@/types").XianyuFetchSummary>("fetch_xianyu_price", { targetId }); },
   /** 把隐藏的抓价窗口亮出来。闲鱼要登录时用得上，登录态会留在 App 自己的 WebView2 目录里 */

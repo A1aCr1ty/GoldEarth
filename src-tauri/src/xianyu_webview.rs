@@ -19,11 +19,22 @@ const POLL_EVERY: Duration = Duration::from_millis(700);
 /// 原始响应存多少字下来做排查。够看清结构，又不至于把文件撑爆
 const RAW_KEEP: usize = 2_000_000;
 
+fn retain_session_on_close(window: &tauri::WebviewWindow) {
+    let hidden = window.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            let _ = hidden.hide();
+        }
+    });
+}
+
 /// 一次抓取的结果摘要
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FetchSummary {
     pub ok: bool,
+    pub needs_verification: bool,
     /// 认出几个在售价
     pub count: usize,
     pub avg: Option<f64>,
@@ -32,6 +43,19 @@ pub struct FetchSummary {
     /// 服务器的 ret 原话
     pub ret: String,
     pub message: String,
+}
+
+fn needs_verification(ret: &str) -> bool {
+    let ret = ret.to_ascii_uppercase();
+    [
+        "RGV587",
+        "USER_VALIDATE",
+        "USER_LOGIN",
+        "SESSION_EXPIRED",
+        "NEED_LOGIN",
+    ]
+    .iter()
+    .any(|code| ret.contains(code))
 }
 
 /// 抓价过程的流水。界面上一句话说不清发生了什么，这里留一份，
@@ -71,7 +95,7 @@ impl XianyuWait {
 ///
 /// 只抓东西，**不 invoke、不用定时器、不发话**——回传由 Rust 用 `eval`
 /// 主动来取（见模块开头）。
-const HOOK_JS: &str = r#"
+pub(crate) const HOOK_JS: &str = r#"
 (function () {
   if (window.__xyHooked) return;
   window.__xyRaw = '';
@@ -79,12 +103,21 @@ const HOOK_JS: &str = r#"
   window.__xyRawRet = '';
 
   function onResponse(url, body) {
-    if (!url || url.indexOf('idlemtopsearch') < 0) return;
-    window.__xyRawUrl = String(url);
+    if (!url || url.indexOf('idlemtopsearch.pc.search') < 0 ||
+        url.indexOf('activate') >= 0 || url.indexOf('shade') >= 0) return;
     if (!body) return;
-    window.__xyRaw = String(body).slice(0, 2000000);
+    var text = String(body).slice(0, 2000000);
+    // 搜索页同时请求激活词、shade 等辅助接口；它们不是商品列表，不能覆盖真正结果。
     var ret = '';
-    try { ret = (JSON.parse(window.__xyRaw).ret || []).join('; '); } catch (e) {}
+    try {
+      var parsed = JSON.parse(text);
+      var api = String(parsed.api || '');
+      if (api && (api.indexOf('idlemtopsearch.pc.search') < 0 ||
+                  api.indexOf('activate') >= 0 || api.indexOf('shade') >= 0)) return;
+      ret = (parsed.ret || []).join('; ');
+    } catch (e) {}
+    window.__xyRawUrl = String(url);
+    window.__xyRaw = text;
     window.__xyRawRet = ret;
   }
 
@@ -136,7 +169,10 @@ const HOOK_JS: &str = r#"
   //    宁可少收，也不能算出一个看起来很精确的错数
   var PRICE_RE = /^[¥￥]\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)$/;
 
-  function scanPrices() {
+  function scanPrices(keyword) {
+    var terms = String(keyword || '').toLowerCase().match(/[a-z0-9]+|[\u3400-\u9fff]+/g) || [];
+    if (!terms.length) return [];
+    var unwanted = /配件|保护壳|保护套|保护膜|贴膜|收纳包|收纳盒|挂绳|支架|充电器|充电线|充电头|镜头盖|转接环|滤镜|空盒|包装盒|纸盒|定金|订金|拍下改价|维修|故障|不含主机|仅外壳|图纸|模型|仅链接|配件单出|单卖配件/;
     var all = document.body ? document.body.querySelectorAll('*') : [];
     var hits = [];
     for (var i = 0; i < all.length; i++) {
@@ -145,7 +181,20 @@ const HOOK_JS: &str = r#"
       if (t.length < 2 || t.length > 18) continue;
       if (!PRICE_RE.test(t)) continue;
       var n = parseFloat(t.replace(/^[¥￥]\s*/, '').replace(/,/g, ''));
-      if (isFinite(n) && n >= 1 && n <= 1000000) hits.push({ el: node, n: n });
+      if (!isFinite(n) || n < 1 || n > 1000000) continue;
+      // 只把价格归属到标题含全部搜索词的商品卡片，排除无关商品、配件和定金。
+      var card = node;
+      var cardText = '';
+      for (var depth = 0; card && depth < 9; depth++, card = card.parentElement) {
+        var candidate = (card.innerText || card.textContent || '').replace(/\s+/g, ' ').trim();
+        if (candidate.length > 2 && candidate.length <= 450 &&
+            terms.every(function (term) { return candidate.toLowerCase().indexOf(term) >= 0; })) {
+          cardText = candidate;
+          break;
+        }
+      }
+      if (!cardText || unwanted.test(cardText)) continue;
+      hits.push({ el: node, n: n });
     }
     // 只留最内层的那一个。外层容器会把内层的文字原样抄一遍
     // （卡片里只有一件商品时，容器整段就等于那个价格），
@@ -176,7 +225,7 @@ const HOOK_JS: &str = r#"
 const POLL_JS: &str = r#"
 (function () {
   var prices = [];
-  try { if (window.__xyScan) prices = window.__xyScan(); } catch (e) {}
+  try { if (window.__xyScan) prices = window.__xyScan(__XY_KEYWORD_JSON__); } catch (e) {}
   return {
     prices: prices,
     hooked: !!window.__xyHooked,
@@ -214,10 +263,12 @@ fn is_search_page(page_url: &str, keyword: &str, request_id: &str) -> bool {
             .any(|(key, value)| key == "_ge_probe" && value == request_id)
 }
 
-async fn read_poll(w: &tauri::WebviewWindow) -> Result<Poll, String> {
+async fn read_poll(w: &tauri::WebviewWindow, keyword: &str) -> Result<Poll, String> {
+    let keyword_json = serde_json::to_string(keyword).map_err(|e| e.to_string())?;
+    let script = POLL_JS.replace("__XY_KEYWORD_JSON__", &keyword_json);
     let (tx, rx) = tokio::sync::oneshot::channel();
     let tx = Mutex::new(Some(tx));
-    w.eval_with_callback(POLL_JS, move |result| {
+    w.eval_with_callback(&script, move |result| {
         if let Some(tx) = tx.lock().take() {
             let _ = tx.send(result);
         }
@@ -270,6 +321,92 @@ pub fn extract_prices(raw: &str) -> Vec<f64> {
     // 一条搜索结果里最多几十个价格，兜个上限免得响应里混进大数组把内存吃光
     out.truncate(200);
     out
+}
+
+/// 搜索接口只收标题确实匹配关键词的商品卡片，避免把同一响应里的推荐项/配件算进均价。
+fn extract_matching_prices(raw: &str, keyword: &str) -> Vec<f64> {
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(raw) else {
+        return Vec::new();
+    };
+    let Some(results) = json.pointer("/data/resultList").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+    let terms: Vec<String> = keyword
+        .split_whitespace()
+        .map(|term| term.to_lowercase())
+        .filter(|term| !term.is_empty())
+        .collect();
+    let unwanted = [
+        "配件",
+        "保护壳",
+        "保护套",
+        "保护膜",
+        "贴膜",
+        "收纳包",
+        "收纳盒",
+        "挂绳",
+        "支架",
+        "充电器",
+        "充电线",
+        "充电头",
+        "镜头盖",
+        "转接环",
+        "滤镜",
+        "空盒",
+        "包装盒",
+        "纸盒",
+        "定金",
+        "订金",
+        "拍下改价",
+        "维修",
+        "故障",
+        "不含主机",
+        "仅外壳",
+        "图纸",
+        "模型",
+        "仅链接",
+        "配件单出",
+        "单卖配件",
+    ];
+    let mut out = Vec::new();
+    for item in results {
+        let mut titles = Vec::new();
+        collect_titles(item, &mut titles);
+        let title = titles.join(" ").to_lowercase();
+        if title.is_empty()
+            || !terms.iter().all(|term| title.contains(term))
+            || unwanted.iter().any(|word| title.contains(word))
+        {
+            continue;
+        }
+        walk(item, &mut out);
+    }
+    out.truncate(200);
+    out
+}
+
+fn collect_titles(v: &serde_json::Value, out: &mut Vec<String>) {
+    match v {
+        serde_json::Value::Object(map) => {
+            for (key, value) in map {
+                if matches!(
+                    key.to_ascii_lowercase().as_str(),
+                    "title" | "subject" | "itemtitle" | "item_title"
+                ) {
+                    if let Some(title) = value.as_str() {
+                        out.push(title.to_string());
+                    }
+                }
+                collect_titles(value, out);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_titles(item, out);
+            }
+        }
+        _ => {}
+    }
 }
 
 fn walk(v: &serde_json::Value, out: &mut Vec<f64>) {
@@ -348,24 +485,39 @@ pub(crate) struct Resolution {
     pub usable: bool,
 }
 
-/// 仅对成功的搜索接口响应计价。搜索失败时 DOM 仍可能含推荐商品，
-/// 不能用全页扫描结果代替目标关键词的搜索结果。
-pub(crate) fn resolve(_dom_prices: Vec<f64>, raw: &str, ret: &str) -> Resolution {
+/// 只从成功的搜索结果响应和已按关键词过滤的商品卡片取价。
+/// 若接口明确带了空 `resultList`，则不采页面价格，以免把推荐商品当成搜索结果。
+pub(crate) fn resolve(
+    dom_prices: Vec<f64>,
+    raw: &str,
+    ret: &str,
+    keyword: &str,
+    page_verified: bool,
+) -> Resolution {
     let success = ret.starts_with("SUCCESS::");
     let blocked = !ret.is_empty() && !success;
-    let prices = if success {
-        extract_prices(raw)
+    let json = serde_json::from_str::<serde_json::Value>(raw).ok();
+    let explicit_empty = json
+        .as_ref()
+        .and_then(|v| v.pointer("/data/resultList"))
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(Vec::is_empty);
+    let api_prices = if success {
+        extract_matching_prices(raw, keyword)
     } else {
         Vec::new()
     };
+    // 页面卡片已经按关键词和标题过滤；优先于可能含推荐/配件的结构化结果。
+    let use_dom = page_verified && !blocked && !explicit_empty && dom_prices.len() >= 3;
+    let prices = if use_dom { dom_prices } else { api_prices };
     let (avg, min, max) = summarize(&prices);
-    let usable = success && prices.len() >= 3 && avg.is_some();
+    let usable = (success || use_dom) && prices.len() >= 3 && avg.is_some();
     Resolution {
         prices,
         avg,
         min,
         max,
-        from_dom: false,
+        from_dom: use_dom,
         blocked,
         usable,
     }
@@ -387,8 +539,7 @@ pub(crate) fn message_for(r: &Resolution, stored: bool) -> String {
             r.max.unwrap_or_default()
         )
     } else if r.blocked {
-        "闲鱼拦截了搜索请求（登录或风控验证），暂未取得价格。点「打开闲鱼」查看页面，完成页面提示后再重试。"
-            .to_string()
+        "闲鱼未返回有效的搜索结果，本次未更新价格。".to_string()
     } else if r.usable {
         "认出的均价没能写进存储，行情可能没记上。".to_string()
     } else if count > 0 {
@@ -427,7 +578,7 @@ pub async fn xianyu_fetch(
     } else {
         wait.note(format!("新建抓价窗 → {url}"));
         let w2 = wait.clone();
-        WebviewWindowBuilder::new(
+        let window = WebviewWindowBuilder::new(
             &app,
             LABEL,
             WebviewUrl::External(
@@ -445,6 +596,7 @@ pub async fn xianyu_fetch(
         })
         .build()
         .map_err(|e| format!("建抓价窗口失败：{e}"))?;
+        retain_session_on_close(&window);
     }
 
     let Some(w) = app.get_webview_window(LABEL) else {
@@ -456,12 +608,12 @@ pub async fn xianyu_fetch(
     let mut last: Option<Poll> = None;
     let mut last_error = String::new();
     loop {
-        match read_poll(&w).await {
+        match read_poll(&w, keyword).await {
             Ok(p) if is_search_page(&p.page_url, keyword, &request_id) => {
-                let r = resolve(p.prices.clone(), &p.raw, &p.raw_ret);
-                let enough = r.usable;
+                let r = resolve(p.prices.clone(), &p.raw, &p.raw_ret, keyword, true);
+                let finished = r.usable || needs_verification(&p.raw_ret);
                 last = Some(p);
-                if enough {
+                if finished {
                     break;
                 }
             }
@@ -477,6 +629,7 @@ pub async fn xianyu_fetch(
     let Some(poll) = last else {
         return Ok(FetchSummary {
             ok: false,
+            needs_verification: false,
             count: 0,
             avg: None,
             min: None,
@@ -492,7 +645,7 @@ pub async fn xianyu_fetch(
         let raw: String = poll.raw.chars().take(RAW_KEEP).collect();
         let _ = state.storage.dump_xianyu_response(&raw);
     }
-    let r = resolve(poll.prices.clone(), &poll.raw, &poll.raw_ret);
+    let r = resolve(poll.prices.clone(), &poll.raw, &poll.raw_ret, keyword, true);
     let count = r.prices.len();
     let mut stored = None;
     if r.usable {
@@ -507,6 +660,11 @@ pub async fn xianyu_fetch(
             .ok();
     }
     let mut message = message_for(&r, stored.is_some());
+    let verification = needs_verification(&poll.raw_ret);
+    if verification {
+        message = "闲鱼本次未提供可用的公开搜索结果，未更新价格。可改用免登录的公开二手报价查询。"
+            .to_string();
+    }
     if !r.usable {
         message.push_str(&format!(
             "\n页面：{}；搜索响应 {} 字节；采集脚本{}；页面价格 {} 条（未作为搜索结果计价）",
@@ -523,6 +681,7 @@ pub async fn xianyu_fetch(
 
     let summary = FetchSummary {
         ok: r.usable && stored.is_some(),
+        needs_verification: verification,
         count,
         avg: r.avg,
         min: r.min,
@@ -539,12 +698,13 @@ pub async fn xianyu_fetch(
 pub async fn xianyu_show(app: AppHandle) -> Result<(), String> {
     if let Some(w) = app.get_webview_window(LABEL) {
         let _ = w.set_position(tauri::PhysicalPosition::new(80.0, 80.0));
-        let _ = w.show();
-        let _ = w.set_focus();
+        w.show().map_err(|e| format!("显示闲鱼窗口失败：{e}"))?;
+        w.set_focus()
+            .map_err(|e| format!("聚焦闲鱼窗口失败：{e}"))?;
         return Ok(());
     }
     // 还没建过就先建一扇可见的空窗口，让用户能进去登录
-    WebviewWindowBuilder::new(
+    let window = WebviewWindowBuilder::new(
         &app,
         LABEL,
         WebviewUrl::External(
@@ -556,6 +716,7 @@ pub async fn xianyu_show(app: AppHandle) -> Result<(), String> {
     .initialization_script(HOOK_JS)
     .build()
     .map_err(|e| format!("打开闲鱼失败：{e}"))?;
+    retain_session_on_close(&window);
     Ok(())
 }
 
@@ -643,7 +804,7 @@ mod tests {
     #[test]
     fn recommendations_cannot_be_saved_as_search_prices() {
         for ret in ["", "RGV587_ERROR::SM::被拦截"] {
-            let r = resolve(vec![6.5, 100.0, 1000.0], "", ret);
+            let r = resolve(vec![6.5, 100.0, 1000.0], "", ret, "pocket 3", false);
             assert!(!r.usable);
             assert!(r.prices.is_empty());
             assert_eq!(r.avg, None);
@@ -653,16 +814,40 @@ mod tests {
     #[test]
     fn an_xhr_response_with_a_failed_ret_is_reported_as_blocked() {
         let raw = r#"{"ret":["RGV587_ERROR::SM::哎哟喂,被挤爆啦"]}"#;
-        let r = resolve(vec![], raw, "RGV587_ERROR::SM::哎哟喂,被挤爆啦");
+        let r = resolve(
+            vec![],
+            raw,
+            "RGV587_ERROR::SM::哎哟喂,被挤爆啦",
+            "pocket 3",
+            false,
+        );
         assert!(r.blocked);
         assert!(!r.usable);
-        assert!(message_for(&r, false).contains("拦截"));
+        assert!(message_for(&r, false).contains("本次未更新"));
+    }
+
+    #[test]
+    fn verification_response_cannot_save_rendered_recommendations() {
+        let ret = "RGV587_ERROR::SM::哎哟喂,被挤爆啦,请稍后重试!";
+        assert!(needs_verification(ret));
+        assert!(!needs_verification("FAIL_SYS_TOKEN_EXPIRED::令牌过期"));
+        assert!(!needs_verification("SUCCESS::调用成功"));
+        let r = resolve(vec![1800.0, 2000.0, 2100.0], "", ret, "pocket 3", true);
+        assert!(r.blocked);
+        assert!(!r.usable);
+        assert_eq!(r.avg, None);
     }
 
     #[test]
     fn a_single_price_is_not_enough_for_an_average() {
         // 只认出 1 个就敢报均价的话，用户会拿它当行情用
-        let r = resolve(vec![], r#"{"data":{"price":"1999"}}"#, "SUCCESS::调用成功");
+        let r = resolve(
+            vec![],
+            r#"{"data":{"resultList":[{"title":"DJI Pocket 3","price":"1999"}]}}"#,
+            "SUCCESS::调用成功",
+            "pocket 3",
+            false,
+        );
         assert!(!r.usable);
         assert_eq!(r.avg, Some(1999.0), "算术上没错，但样本太少");
         assert!(message_for(&r, false).contains("太少"));
@@ -670,29 +855,29 @@ mod tests {
 
     #[test]
     fn full_response_is_used_when_dom_has_too_few_prices() {
-        let raw = r#"{"data":{"items":[{"price":100},{"price":200},{"price":300}]}}"#;
-        let r = resolve(vec![999.0], raw, "SUCCESS::调用成功");
+        let raw = r#"{"data":{"resultList":[{"title":"DJI Pocket 3","price":100},{"title":"DJI Pocket 3 相机","price":200},{"title":"Pocket 3 Creator Combo","price":300}]}}"#;
+        let r = resolve(vec![999.0], raw, "SUCCESS::调用成功", "pocket 3", false);
         assert!(r.usable);
         assert!(!r.from_dom);
         assert_eq!(r.avg, Some(200.0));
-        let denied = resolve(vec![], raw, "FAIL::not SUCCESS");
+        let denied = resolve(vec![], raw, "FAIL::not SUCCESS", "pocket 3", false);
         assert!(!denied.usable);
         assert!(denied.blocked);
-        assert!(!resolve(vec![], "", "").blocked);
+        assert!(!resolve(vec![], "", "", "pocket 3", false).blocked);
     }
 
     #[test]
     fn only_search_results_are_averaged_and_currency_is_parsed() {
         let raw = r#"{"ret":["SUCCESS::调用成功"],"data":{"resultList":[
-          {"data":{"item":{"main":{"exContent":{"price":"¥1,200.50"}}}}},
-          {"price":"￥ 1,300"},{"price":1400}],"recommendations":[{"price":9}]}}"#;
-        let r = resolve(vec![9.0, 9.0, 9.0], raw, "SUCCESS::调用成功");
+          {"title":"DJI Pocket 3 二手","data":{"item":{"main":{"exContent":{"price":"¥1,200.50"}}}}},
+          {"title":"pocket 3 个人转让","price":"￥ 1,300"},{"title":"DJI Pocket 3 套装","price":1400}],"recommendations":[{"price":9}]}}"#;
+        let r = resolve(vec![], raw, "SUCCESS::调用成功", "pocket 3", false);
         assert!(r.usable);
         assert_eq!(r.prices, vec![1200.5, 1300.0, 1400.0]);
         assert_eq!(r.avg, Some(1300.17));
         let empty =
             r#"{"data":{"resultList":[],"recommendations":[{"price":9},{"price":9},{"price":9}]}}"#;
-        assert!(!resolve(vec![9.0; 3], empty, "SUCCESS::调用成功").usable);
+        assert!(!resolve(vec![9.0; 3], empty, "SUCCESS::调用成功", "pocket 3", true).usable);
     }
 
     #[test]
