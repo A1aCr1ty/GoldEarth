@@ -66,7 +66,7 @@ jobs:
         run: node --test app/tests/*.test.cjs scripts/*.test.mjs
 
       - name: Test local storage
-        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib db::
+        run: 'cargo test --locked --manifest-path src-tauri/Cargo.toml --lib db::'
 
       - name: Build the Windows EXE installer
         run: node app/node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis -- --locked
