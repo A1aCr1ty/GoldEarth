@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
-import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags } from "lucide-react";
+import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags, Network } from "lucide-react";
 const nav = [
   { to: "/home", label: "天气", icon: LayoutDashboard },
   { to: "/explore", label: "冲浪", icon: Compass },
@@ -14,6 +14,7 @@ const nav = [
   { to: "/notes", label: "笔记", icon: FileText },
   { to: "/categories", label: "分类", icon: FolderTree },
   { to: "/agents", label: "Agent", icon: Bot },
+  { to: "/archify", label: "Archify", icon: Network },
   { to: "/settings", label: "设置", icon: SettingsIcon },
 ];
 export function AppShell() {

@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 export const tauri = {
   ping(): Promise<string> { return invoke<string>("ping"); },
   listCategories() { return invoke<import("@/types").Category[]>("list_categories"); },
+  listCategoryHtmlFiles() { return invoke<import("@/types").CategoryHtmlFile[]>("list_category_html_files"); },
+  readCategoryHtmlFile(categoryId: string | null, name: string) { return invoke<string>("read_category_html_file", { categoryId, name }); },
   createCategory(input: { name: string; icon?: string; description?: string }) { return invoke<import("@/types").Category>("create_category", { input }); },
   updateCategory(id: string, input: { name?: string; icon?: string; description?: string }) { return invoke<import("@/types").Category>("update_category", { id, input }); },
   deleteCategory(id: string) { return invoke<void>("delete_category", { id }); },

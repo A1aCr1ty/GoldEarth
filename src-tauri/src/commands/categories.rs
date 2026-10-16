@@ -13,6 +13,16 @@ pub fn list_categories(state: State<'_, AppState>) -> Result<Vec<Category>, Stri
     Ok(state.storage.list_categories())
 }
 
+#[tauri::command]
+pub fn list_category_html_files(state: State<'_, AppState>) -> Result<Vec<crate::db::category_files::CategoryHtmlFile>, String> {
+    crate::db::category_files::list_html(state.storage.vault_root(), &state.storage.list_categories())
+}
+
+#[tauri::command]
+pub fn read_category_html_file(state: State<'_, AppState>, category_id: Option<String>, name: String) -> Result<String, String> {
+    crate::db::category_files::read_html(state.storage.vault_root(), &state.storage.list_categories(), category_id.as_deref(), &name)
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CategoryInput {
     pub name: String,

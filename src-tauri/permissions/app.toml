@@ -12,6 +12,12 @@
 identifier = "allow-app-commands"
 description = "App 自己的全部命令，供主窗口使用。"
 commands.allow = [
+  "archify_template",
+  "prepare_archify_generation",
+  "render_archify",
+  "export_archify",
+  "export_archify_to_category",
+  "open_archify_category_folder",
   "add_price_target",
   "available_indices",
   "cancel_agent_run",
@@ -44,6 +50,8 @@ commands.allow = [
   "list_agent_runs",
   "list_agents",
   "list_categories",
+  "list_category_html_files",
+  "read_category_html_file",
   "list_library_categories",
   "list_library_files",
   "list_library_runs",

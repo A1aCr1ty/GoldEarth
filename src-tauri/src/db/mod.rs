@@ -1,4 +1,5 @@
 pub mod library;
+pub mod category_files;
 pub mod models;
 pub mod prices;
 pub mod vault;
@@ -320,6 +321,7 @@ impl Storage {
                 }
             }
         }
+        category_files::move_exports(&from, &to)?;
         Ok(())
     }
 
@@ -346,6 +348,8 @@ impl Storage {
             .vault
             .root()
             .join(vault::sanitize_dir_name(&removed.name));
+        let unassigned = self.vault.category_dir(UNASSIGNED)?;
+        category_files::move_exports(&dir, &unassigned)?;
         let _ = fs::remove_dir(dir);
         Ok(())
     }

@@ -25,6 +25,12 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "archify_template",
+            "prepare_archify_generation",
+            "render_archify",
+            "export_archify",
+            "export_archify_to_category",
+            "open_archify_category_folder",
             "get_storage_info",
             "open_storage_folder",
             "change_storage_location",
@@ -33,6 +39,8 @@ fn main() {
             "get_settings",
             "update_settings",
             "list_categories",
+            "list_category_html_files",
+            "read_category_html_file",
             "create_category",
             "update_category",
             "delete_category",

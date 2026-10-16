@@ -1,4 +1,5 @@
 export type CategoryId = string;
+export interface CategoryHtmlFile { categoryId: CategoryId | null; name: string; size: number; updatedAt: string }
 export interface Category {
   id: CategoryId;
   name: string;

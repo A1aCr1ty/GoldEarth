@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod archify;
 pub mod categories;
 pub mod horoscope;
 pub mod library;

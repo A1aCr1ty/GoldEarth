@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, ChevronDown, ChevronRight, FileText, FolderOpen, ListTodo, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Code2, FileText, FolderOpen, ListTodo, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { tauri } from "@/lib/tauri";
+import type { CategoryHtmlFile } from "@/types";
 import { useCategories } from "@/store/categories";
 import { useNotes } from "@/store/notes";
 import { useLibrary } from "@/store/library";
@@ -36,7 +38,22 @@ export default function CategoriesPage() {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("📁");
   const [description, setDescription] = useState("");
-  useEffect(() => { void refresh(); void refreshNotes(); void refreshLibrary(); }, [refresh, refreshNotes, refreshLibrary]);
+  const [htmlFiles, setHtmlFiles] = useState<CategoryHtmlFile[]>([]);
+  const [htmlLoading, setHtmlLoading] = useState(false);
+  const [htmlListError, setHtmlListError] = useState<string | null>(null);
+  const [openedHtml, setOpenedHtml] = useState<CategoryHtmlFile | null>(null);
+  const [htmlContent, setHtmlContent] = useState("");
+  const [htmlReadError, setHtmlReadError] = useState("");
+  const [htmlReading, setHtmlReading] = useState(false);
+  const htmlRequest = useRef(0);
+  const refreshHtml = useCallback(async () => {
+    setHtmlLoading(true); setHtmlListError(null);
+    try { setHtmlFiles(await tauri.listCategoryHtmlFiles()); }
+    catch (e) { setHtmlListError(errText(e)); }
+    finally { setHtmlLoading(false); }
+  }, []);
+  useEffect(() => { void refresh(); void refreshNotes(); void refreshLibrary(); void refreshHtml(); }, [refresh, refreshNotes, refreshLibrary, refreshHtml]);
+  useEffect(() => () => { htmlRequest.current++; }, []);
   const folders = useMemo(() => {
     const grouped = new Map<string | null, typeof notes>();
     const knownIds = new Set(items.map((c) => c.id));
@@ -47,8 +64,8 @@ export default function CategoriesPage() {
       grouped.set(id, group);
     }
     const all = [
-      ...items.map((c) => ({ ...c, notes: grouped.get(c.id) ?? [] })),
-      { id: "__unassigned__", name: "未分类", icon: "📂", description: "尚未放入分类的笔记", notes: grouped.get(null) ?? [] },
+      ...items.map((c) => ({ ...c, notes: grouped.get(c.id) ?? [], htmlFiles: htmlFiles.filter(file => file.categoryId === c.id) })),
+      { id: "__unassigned__", name: "未分类", icon: "📂", description: "尚未放入分类的文件", notes: grouped.get(null) ?? [], htmlFiles: htmlFiles.filter(file => file.categoryId === null) },
     ];
     const keyword = query.trim().toLocaleLowerCase();
     return all.map((folder) => {
@@ -56,9 +73,20 @@ export default function CategoriesPage() {
       const visibleNotes = folder.notes
         .filter((note) => matchesFolder || note.title.toLocaleLowerCase().includes(keyword))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-      return { ...folder, visibleNotes, matchesFolder };
-    }).filter((folder) => !keyword || folder.matchesFolder || folder.visibleNotes.length > 0);
-  }, [items, notes, query]);
+      const visibleHtml = folder.htmlFiles.filter(file => matchesFolder || file.name.toLocaleLowerCase().includes(keyword));
+      return { ...folder, visibleNotes, visibleHtml, matchesFolder };
+    }).filter((folder) => !keyword || folder.matchesFolder || folder.visibleNotes.length > 0 || folder.visibleHtml.length > 0);
+  }, [items, notes, htmlFiles, query]);
+
+  async function openHtml(file: CategoryHtmlFile) {
+    const request = ++htmlRequest.current;
+    setOpenedHtml(file); setHtmlContent(""); setHtmlReadError(""); setHtmlReading(true);
+    try {
+      const content = await tauri.readCategoryHtmlFile(file.categoryId, file.name);
+      if (request === htmlRequest.current) setHtmlContent(content);
+    } catch (e) { if (request === htmlRequest.current) setHtmlReadError(errText(e)); }
+    finally { if (request === htmlRequest.current) setHtmlReading(false); }
+  }
 
   function toggleFolder(id: string) {
     setCollapsed((previous) => {
@@ -69,9 +97,9 @@ export default function CategoriesPage() {
   }
 
   async function handleRemove(id: string, folderName: string) {
-    if (!window.confirm(`删除分类「${folderName}」？里面的笔记会移到「未分类」。`)) return;
+    if (!window.confirm(`删除分类「${folderName}」？里面的笔记和 HTML 图表会移到「未分类」。`)) return;
     setLocalError(null);
-    try { await remove(id); await refreshNotes(); }
+    try { await remove(id); await refreshNotes(); await refreshHtml(); }
     catch (e) { setLocalError(errText(e)); }
   }
 
@@ -109,7 +137,7 @@ export default function CategoriesPage() {
       <header className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <div>
           <h1 className="text-lg font-semibold">分类</h1>
-          <p className="text-xs text-muted-foreground">按文件夹浏览笔记，点击文件直接打开</p>
+          <p className="text-xs text-muted-foreground">按文件夹浏览笔记和 HTML 图表，点击文件直接打开</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
         <Dialog open={importOpen} onOpenChange={setImportOpen}>
@@ -171,14 +199,14 @@ export default function CategoriesPage() {
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} className="h-9 pl-9" placeholder="搜索文件夹或文件标题" aria-label="搜索文件夹或文件标题" />
         </div>
-        <span className="text-xs text-muted-foreground">{items.length} 个分类 · {notes.length} 个文件</span>
-        <Button size="sm" variant="ghost" disabled={loading || notesLoading} onClick={() => { void refresh(); void refreshNotes(); }}>
-          <RefreshCw className={`h-3.5 w-3.5 ${loading || notesLoading ? "animate-spin" : ""}`} /> 刷新
+        <span className="text-xs text-muted-foreground">{items.length} 个分类 · {notes.length + htmlFiles.length} 个文件</span>
+        <Button size="sm" variant="ghost" disabled={loading || notesLoading || htmlLoading} onClick={() => { void refresh(); void refreshNotes(); void refreshHtml(); }}>
+          <RefreshCw className={`h-3.5 w-3.5 ${loading || notesLoading || htmlLoading ? "animate-spin" : ""}`} /> 刷新
         </Button>
       </div>
-      {(localError || error || notesError || importMessage) && <p role={localError || error || notesError ? "alert" : "status"} className={`border-b px-4 py-2 text-xs ${localError || error || notesError ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"}`}>{localError || error || notesError || importMessage}</p>}
+      {(localError || error || notesError || htmlListError || importMessage) && <p role={localError || error || notesError || htmlListError ? "alert" : "status"} className={`border-b px-4 py-2 text-xs ${localError || error || notesError || htmlListError ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"}`}>{localError || error || notesError || htmlListError || importMessage}</p>}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {loading || notesLoading ? (
+        {loading || notesLoading || htmlLoading ? (
           <p role="status" className="py-10 text-center text-sm text-muted-foreground">正在读取文件夹和文件…</p>
         ) : folders.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">没有匹配的文件夹或文件，试试其他关键词。</p>
@@ -196,7 +224,7 @@ export default function CategoriesPage() {
                         <CardTitle className="break-words text-sm leading-6">{folder.name}</CardTitle>
                         {folder.description && <CardDescription className="mt-0.5 line-clamp-2 text-xs">{folder.description}</CardDescription>}
                       </div>
-                      <Badge variant="secondary" className="mt-0.5 shrink-0">{folder.notes.length}</Badge>
+                      <Badge variant="secondary" className="mt-0.5 shrink-0">{folder.notes.length + folder.htmlFiles.length}</Badge>
                     </button>
                     {folder.id !== "__unassigned__" && (
                       <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => void handleRemove(folder.id, folder.name)} aria-label={`删除分类 ${folder.name}`}>
@@ -206,12 +234,19 @@ export default function CategoriesPage() {
                   </CardHeader>
                   {expanded && (
                     <CardContent id={`folder-${folder.id}`} className="border-t p-0">
-                      {folder.visibleNotes.length === 0 ? (
+                      {folder.visibleNotes.length === 0 && folder.visibleHtml.length === 0 ? (
                         <div className="flex items-center gap-2 px-4 py-6 text-xs text-muted-foreground">
-                          <FolderOpen className="h-4 w-4" />{folder.notes.length ? "没有匹配的文件" : "文件夹里还没有笔记"}
+                          <FolderOpen className="h-4 w-4" />{folder.notes.length + folder.htmlFiles.length ? "没有匹配的文件" : "文件夹里还没有文件"}
                         </div>
                       ) : (
                         <ul className="max-h-80 divide-y overflow-y-auto">
+                          {folder.visibleHtml.map(file => <li key={`html:${file.name}`}>
+                            <button className="group flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none" onClick={() => void openHtml(file)} title={`打开 ${file.name}`}>
+                              <Code2 className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                              <div className="min-w-0 flex-1"><p className="truncate text-sm">{file.name}</p><p className="mt-0.5 text-[0.6875rem] text-muted-foreground">HTML 图表 · 更新于 {new Date(file.updatedAt).toLocaleDateString()}</p></div>
+                              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            </button>
+                          </li>)}
                           {folder.visibleNotes.map((note) => {
                             const Icon = note.format === "todo" ? ListTodo : FileText;
                             return (
@@ -250,6 +285,20 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
+      <Dialog open={openedHtml !== null} onOpenChange={isOpen => {
+        if (!isOpen) { htmlRequest.current++; setOpenedHtml(null); setHtmlContent(""); setHtmlReadError(""); setHtmlReading(false); }
+      }}>
+        <DialogContent className="flex h-[90vh] w-[94vw] max-w-none flex-col gap-2 p-3">
+          <DialogHeader className="shrink-0 pr-8 text-left">
+            <DialogTitle className="truncate text-base">{openedHtml?.name || "HTML 图表"}</DialogTitle>
+            <DialogDescription>分类文件夹中的 HTML 图表</DialogDescription>
+          </DialogHeader>
+          {htmlReading ? <p role="status" className="p-4 text-sm text-muted-foreground">正在打开 HTML 图表…</p>
+            : htmlReadError ? <p role="alert" className="p-4 text-sm text-destructive">{htmlReadError}</p>
+            : htmlContent ? <iframe title="分类 HTML 图表" className="min-h-0 w-full flex-1 rounded border bg-white" sandbox="allow-scripts allow-downloads" srcDoc={htmlContent} />
+            : <p className="p-4 text-sm text-muted-foreground">HTML 文件为空。</p>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
