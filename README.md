@@ -80,6 +80,29 @@ cargo tauri build
 
 打包后的可执行文件位于 `src-tauri\target\release\bundle\`。
 
+### GitHub 自动发布 Windows EXE
+
+推送 `v版本号` 标签会触发 `.github/workflows/release-windows.yml`，在 Windows x64
+环境安装依赖、执行笔记与本地存储测试、构建 NSIS EXE 安装包，并发布到
+[GitHub Releases](https://github.com/A1aCr1ty/GoldEarth/releases)。安装包旁附有
+`SHA256SUMS.txt` 校验文件；Actions 页面也会保留构建产物 30 天。
+
+每次发布前先把需要发布的代码提交并推送，然后创建一个尚未使用的版本标签：
+
+```powershell
+git push origin master
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+工作流会根据标签自动同步前端、Tauri 和 Cargo 的打包版本号，无需手动改多处文件。
+这些版本变更仅用于构建，不会向分支额外提交代码。`v0.2.0-beta.1` 之类的标签
+会发布为预发布版本。已有版本需要重试时，在 Actions → Release Windows EXE →
+Run workflow 中填写现有标签；重跑会更新该版本的附件，不会新建版本号。
+
+工作流使用 GitHub 自带的 `GITHUB_TOKEN`，无需配置个人访问令牌。安装包目前没有
+Windows 代码签名证书签名。此流程负责构建和发布安装包，不包含应用内自动升级。
+
 ## 笔记仓库（vault）
 
 笔记不再存进 JSON，而是以 **Markdown 文件**形式保存在 `vault/` 目录，

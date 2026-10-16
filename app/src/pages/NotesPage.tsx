@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,10 +11,15 @@ import { MarkdownEditor } from "@/components/markdown/MarkdownEditor";
 import { NoteAgentChat } from "@/components/agent/NoteAgentChat";
 import type { AgentRun, Note, NoteFormat } from "@/types";
 /** 表单载入时的快照，用来判断用户之后有没有改动过 */
-type NoteSnapshot = { id: string; title: string; content: string; categoryId: string | null; format: NoteFormat; tags: string };
+type NoteSnapshot = { id: string; modified?: string; title: string; content: string; categoryId: string | null; format: NoteFormat; tags: string };
+function sameForm(a: NoteSnapshot, b: NoteSnapshot) {
+  return a.id === b.id && a.title === b.title && a.content === b.content &&
+    a.categoryId === b.categoryId && a.format === b.format && a.tags === b.tags;
+}
 function snapshotOf(n: Note): NoteSnapshot {
   return {
     id: n.id,
+    modified: n.modified,
     title: n.title,
     content: n.content,
     categoryId: n.categoryId,
@@ -37,34 +42,93 @@ export default function NotesPage() {
   const [external, setExternal] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [reloadTick, setReloadTick] = useState(0);
+  const [saveStatus, setSaveStatus] = useState("已自动保存");
   /** 已载入进表单的那份内容 */
   const loaded = useRef<NoteSnapshot | null>(null);
   /** 表单相对载入内容是否有改动，用它决定能不能覆盖编辑区 */
   const formDirty = useRef(false);
+  const draft = useRef<NoteSnapshot | null>(null);
+  const saving = useRef<Promise<boolean> | null>(null);
+  const blocked = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const handleSave = useCallback((): Promise<boolean> => {
+    clearTimeout(timer.current);
+    if (saving.current) return saving.current;
+    if (blocked.current) return Promise.resolve(false);
+    const task = async () => {
+      // 串行写入；保存期间继续输入的内容在下一轮写入，不能被旧响应覆盖。
+      while (draft.current && loaded.current && !sameForm(draft.current, loaded.current)) {
+        const submitted = { ...draft.current };
+        const base = loaded.current;
+        setSaveStatus("正在保存…");
+        try {
+          await update(submitted.id, {
+            title: submitted.title.trim() || "未命名笔记",
+            content: submitted.content,
+            categoryId: submitted.categoryId,
+            format: submitted.format,
+            tags: submitted.tags.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean),
+            expectedModified: base.modified,
+          }, (saved) => {
+            if (loaded.current?.id !== submitted.id) return;
+            // 在 store 通知页面前确认新版本，避免自己的保存被当成外部修改。
+            // 保留输入框原文，避免规范化标题/标签导致光标跳动或重复保存。
+            const savedSnapshot = { ...submitted, modified: saved.modified };
+            loaded.current = savedSnapshot;
+            formDirty.current = !!draft.current && !sameForm(draft.current, savedSnapshot);
+          });
+          if (loaded.current?.id !== submitted.id) return true;
+          setExternal(false);
+          setConflict(null);
+        } catch (e) {
+          const msg = String(e);
+          blocked.current = true;
+          setSaveStatus("保存失败");
+          setConflict(msg.includes("ERR_CONFLICT")
+            ? msg.replace("ERR_CONFLICT:", "").trim()
+            : `保存失败：${msg}`);
+          return false;
+        }
+      }
+      setSaveStatus("已自动保存");
+      return true;
+    };
+    saving.current = task().finally(() => { saving.current = null; });
+    return saving.current;
+  }, [update]);
   useEffect(() => { refresh(); refreshCategories(); }, [refresh, refreshCategories]);
   // 先算脏状态，「重新载入」的判断才能用到本次渲染之前的结论
   useEffect(() => {
     const base = loaded.current;
-    formDirty.current = !!base && (
-      title !== base.title ||
-      content !== base.content ||
-      categoryId !== base.categoryId ||
-      format !== base.format ||
-      tagsInput !== base.tags
-    );
+    draft.current = base ? { ...base, title, content, categoryId, format, tags: tagsInput } : null;
+    formDirty.current = !!base && !!draft.current && !sameForm(draft.current, base);
   }, [title, content, categoryId, format, tagsInput]);
   useEffect(() => {
     if (!note) {
       loaded.current = null;
+      draft.current = null;
+      formDirty.current = false;
+      blocked.current = false;
+      setConflict(null);
+      setExternal(false);
       setTitle(""); setContent(""); setCategoryId(null); setFormat("markdown"); setTagsInput("");
       return;
     }
+    // 自己保存的响应不重新填充表单，保留期间的新输入和光标位置。
+    if (loaded.current?.id === note.id && loaded.current.modified === note.modified) return;
     // 同一篇笔记的磁盘内容被外部改了：本地有未保存改动时不要覆盖，交给用户决定
     if (loaded.current?.id === note.id && formDirty.current) {
       setExternal(true);
+      blocked.current = true;
+      setSaveStatus("自动保存已暂停");
       return;
     }
     loaded.current = snapshotOf(note);
+    draft.current = loaded.current;
+    formDirty.current = false;
+    blocked.current = false;
+    setConflict(null);
+    setSaveStatus("已自动保存");
     setTitle(note.title);
     setContent(note.content);
     setCategoryId(note.categoryId);
@@ -72,41 +136,43 @@ export default function NotesPage() {
     setTagsInput(note.tags.join(", "));
     setExternal(false);
   }, [note?.id, note?.modified, reloadTick]);
+  useEffect(() => {
+    if (blocked.current) return;
+    if (!formDirty.current) {
+      if (!saving.current) setSaveStatus("已自动保存");
+      return;
+    }
+    setSaveStatus("等待自动保存…");
+    timer.current = setTimeout(() => { void handleSave(); }, 600);
+    return () => clearTimeout(timer.current);
+  }, [title, content, categoryId, format, tagsInput, handleSave]);
+  useEffect(() => {
+    const flush = () => { void handleSave(); };
+    const onVisibility = () => { if (document.hidden) flush(); };
+    window.addEventListener("blur", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("blur", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flush();
+    };
+  }, [handleSave]);
+  async function handleSelect(id: string) {
+    if (id !== currentId && await handleSave()) select(id);
+  }
   async function handleCreate() {
+    if (!await handleSave()) return;
     const n = await create({ categoryId: null, title: "未命名笔记", format: "markdown", content: "", tags: [] });
     select(n.id);
   }
-  async function handleSave() {
-    if (!note) return;
-    const tags = tagsInput.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean);
-    try {
-      const saved = await update(note.id, {
-        title: title.trim() || "未命名笔记",
-        content,
-        categoryId,
-        format,
-        tags,
-        // 带上载入时看到的磁盘时间，防止覆盖 Agent 刚写进去的内容
-        expectedModified: note.modified,
-      });
-      // 保存后表单就是最新内容，更新快照，否则会被当成「还有未保存改动」
-      loaded.current = snapshotOf(saved);
-      formDirty.current = false;
-      setExternal(false);
-      setConflict(null);
-    } catch (e) {
-      const msg = String(e);
-      if (msg.includes("ERR_CONFLICT")) {
-        setConflict(msg.replace("ERR_CONFLICT:", "").trim());
-      } else {
-        setConflict(`保存失败：${msg}`);
-      }
-    }
-  }
   /** 丢弃本地改动，重新读取磁盘上的最新内容 */
   async function handleReload() {
+    clearTimeout(timer.current);
+    if (saving.current) await saving.current;
     // 先清快照，让「表单是否改动」重新算成干净状态
     loaded.current = null;
+    draft.current = null;
+    blocked.current = false;
     formDirty.current = false;
     setConflict(null);
     setExternal(false);
@@ -120,6 +186,10 @@ export default function NotesPage() {
   async function handleDelete() {
     if (!note) return;
     if (!confirm("确定删除这条笔记？")) return;
+    clearTimeout(timer.current);
+    if (saving.current) await saving.current;
+    draft.current = null;
+    loaded.current = null;
     await remove(note.id);
   }
   const placeholder = useMemo(() => {
@@ -144,7 +214,7 @@ export default function NotesPage() {
           {items.map((n) => (
             <button
               key={n.id}
-              onClick={() => select(n.id)}
+              onClick={() => void handleSelect(n.id)}
               title={n.title || "未命名笔记"}
               className={"flex w-full flex-col items-start gap-1 border-b px-4 py-3 text-left text-sm transition-colors hover:bg-accent " + (currentId === n.id ? "bg-accent" : "")}
             >
@@ -178,7 +248,8 @@ export default function NotesPage() {
                 </SelectContent>
               </Select>
               <Input className="h-8 w-36 shrink-0" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="标签（逗号分隔）" />
-              <Button size="sm" className="shrink-0" onClick={handleSave}><Save className="h-4 w-4" /> 保存</Button>
+              <span role="status" className="text-xs text-muted-foreground">{saveStatus}</span>
+              <Button size="sm" className="shrink-0" onClick={() => { if (!external) blocked.current = false; void handleSave(); }}><Save className="h-4 w-4" /> 保存</Button>
               <Button size="sm" className="shrink-0" variant={chatOpen ? "default" : "outline"} onClick={() => setChatOpen((v) => !v)}>
                 <Bot className="h-4 w-4" /> Agent
               </Button>

@@ -27,6 +27,7 @@ app/.vite/
 *.tmp
 *.bak
 .runlogs/
+recovered-notes/
 
 # Editor
 .vscode/

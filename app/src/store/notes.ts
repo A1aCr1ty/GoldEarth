@@ -9,7 +9,7 @@ interface NotesState {
   refresh: (categoryId?: string | null) => Promise<void>;
   select: (id: string | null) => void;
   create: (input: { categoryId: string | null; title: string; format: NoteFormat; content: string; tags: string[] }) => Promise<Note>;
-  update: (id: string, input: { categoryId?: string | null; title?: string; format?: NoteFormat; content?: string; tags?: string[]; expectedModified?: string }) => Promise<Note>;
+  update: (id: string, input: { categoryId?: string | null; title?: string; format?: NoteFormat; content?: string; tags?: string[]; expectedModified?: string }, beforePublish?: (note: Note) => void) => Promise<Note>;
   remove: (id: string) => Promise<void>;
 }
 export const useNotes = create<NotesState>((set) => ({
@@ -31,8 +31,10 @@ export const useNotes = create<NotesState>((set) => ({
     set((s) => ({ items: [note, ...s.items], currentId: note.id }));
     return note;
   },
-  async update(id, input) {
+  async update(id, input, beforePublish) {
     const note = await tauri.updateNote(id, input);
+    // Zustand 会同步通知订阅者；先确认编辑器的保存快照，再发布新版本。
+    beforePublish?.(note);
     set((s) => ({ items: s.items.map((n) => (n.id === id ? note : n)) }));
     return note;
   },

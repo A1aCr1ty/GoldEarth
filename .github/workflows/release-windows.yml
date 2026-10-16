@@ -1,0 +1,107 @@
+name: Release Windows EXE
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag to build, for example v0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out the version tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '11.23.0'
+          run_install: false
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build files
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Apply the tag version to the application
+        run: node scripts/set-release-version.mjs $env:RELEASE_TAG
+
+      - name: Install frontend dependencies
+        run: pnpm --dir app install --frozen-lockfile
+
+      - name: Test notes and release versioning
+        run: node --test app/tests/*.test.cjs scripts/*.test.mjs
+
+      - name: Test local storage
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib db::
+
+      - name: Build the Windows EXE installer
+        run: node app/node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis -- --locked
+
+      - name: Collect installer and checksums
+        run: |
+          New-Item -ItemType Directory -Path release-assets -Force | Out-Null
+          $installers = @(Get-ChildItem -Path 'src-tauri/target/release/bundle/nsis/*-setup.exe' -File)
+          if ($installers.Count -ne 1) { throw "Expected one EXE installer, found $($installers.Count)" }
+          Copy-Item -LiteralPath $installers[0].FullName -Destination release-assets
+          $checksums = Get-ChildItem release-assets -Filter '*.exe' | ForEach-Object {
+            $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+          }
+          $checksums | Set-Content -Path release-assets/SHA256SUMS.txt -Encoding utf8
+
+      - name: Save downloadable build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoldEarth-${{ env.RELEASE_TAG }}-windows-x64
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view $env:RELEASE_TAG --json id 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG release-assets/* --clobber
+          } else {
+            $releaseArgs = @('release', 'create', $env:RELEASE_TAG, '--verify-tag', '--title', "GoldEarth $env:RELEASE_TAG", '--generate-notes')
+            if ($env:RELEASE_TAG.Contains('-')) { $releaseArgs += '--prerelease' }
+            gh @releaseArgs release-assets/*
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the GitHub release failed' }
