@@ -55,6 +55,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+          cache-on-failure: true
 
       - name: Apply the tag version to the application
         run: node scripts/set-release-version.mjs $env:RELEASE_TAG
@@ -65,11 +66,13 @@ jobs:
       - name: Test notes and release versioning
         run: node --test app/tests/*.test.cjs scripts/*.test.mjs
 
-      - name: Test local storage
-        run: 'cargo test --locked --manifest-path src-tauri/Cargo.toml --lib db::'
-
       - name: Build the Windows EXE installer
         run: node app/node_modules/@tauri-apps/cli/tauri.js build --ci --bundles nsis -- --locked
+
+      # generate_context! embeds frontendDist, so build the frontend before Rust tests.
+      # The release profile reuses the dependencies compiled for the installer.
+      - name: Test local storage
+        run: 'cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib db::'
 
       - name: Collect installer and checksums
         run: |
