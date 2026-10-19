@@ -10,6 +10,7 @@ import LibraryPage from "@/pages/LibraryPage";
 import ExplorePage from "@/pages/ExplorePage";
 import PricePage from "@/pages/PricePage";
 import ArchifyPage from "@/pages/ArchifyPage";
+import FileSearchPage from "@/pages/FileSearchPage";
 export default function App() {
   return (
     <HashRouter>
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/prices" element={<PricePage />} />
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/archify" element={<ArchifyPage />} />
+          <Route path="/files" element={<FileSearchPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>

@@ -250,6 +250,32 @@ impl Library {
         fs::remove_file(path)
     }
 
+    /// 移到知识库之外的保留目录。独立目录避免重名覆盖，也避免之后删分类时误删。
+    pub fn detach_file(&self, id: &str, name: &str) -> std::io::Result<PathBuf> {
+        let source = self.resolve_file(id, name)?;
+        let knowledge = self.root.canonicalize()?;
+        let actual = source.canonicalize()?;
+        if !fs::symlink_metadata(&source)?.file_type().is_file() || !actual.starts_with(&knowledge)
+        {
+            return Err(std::io::Error::other("只能移出知识库目录内的普通文件"));
+        }
+        let retained = self.root.with_file_name("knowledge-removed");
+        fs::create_dir_all(&retained)?;
+        let retained = retained.canonicalize()?;
+        if retained.starts_with(&knowledge) {
+            return Err(std::io::Error::other("保留目录不能位于知识库内部"));
+        }
+        let folder = retained.join(uuid::Uuid::new_v4().to_string());
+        fs::create_dir(&folder)?;
+        let destination = folder.join(name);
+        // 同一存储位置内原子移动；移动失败时原文件保持原样，不降级为删后重建。
+        if let Err(e) = fs::rename(&source, &destination) {
+            let _ = fs::remove_dir(&folder);
+            return Err(e);
+        }
+        Ok(destination)
+    }
+
     /// 文本类文件的内容，给界面做预览；二进制返回 None。
     pub fn read_text(&self, id: &str, name: &str) -> std::io::Result<Option<String>> {
         let path = self.resolve_file(id, name)?;
@@ -487,6 +513,57 @@ mod tests {
         lib.delete_category("c1").unwrap();
         assert!(!folder.exists(), "分类目录要一起删掉");
         assert!(lib.list_categories().is_empty());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn detach_preserves_bytes_across_refresh_and_category_deletion() {
+        let (lib, dir) = temp_library("detach");
+        lib.insert_category(category("c1", "资料")).unwrap();
+        let path = lib.category_dir("资料").join("报告.pdf");
+        let content = [0, 1, 2, 255, 42];
+        fs::write(&path, content).unwrap();
+        let saved = lib.detach_file("c1", "报告.pdf").unwrap();
+        assert!(!path.exists());
+        assert_eq!(fs::read(&saved).unwrap(), content);
+        assert!(!saved.starts_with(lib.root().canonicalize().unwrap()));
+        let reopened = Library::new(&dir);
+        assert_eq!(reopened.file_count("c1"), 0);
+        reopened.delete_category("c1").unwrap();
+        assert_eq!(fs::read(saved).unwrap(), content);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn detach_never_overwrites_same_named_retained_files() {
+        let (lib, dir) = temp_library("detach_collision");
+        lib.insert_category(category("c1", "资料")).unwrap();
+        let path = lib.category_dir("资料").join("相同.txt");
+        fs::write(&path, "first").unwrap();
+        let first = lib.detach_file("c1", "相同.txt").unwrap();
+        fs::write(&path, "second").unwrap();
+        let second = lib.detach_file("c1", "相同.txt").unwrap();
+        assert_ne!(first, second);
+        assert_eq!(fs::read_to_string(first).unwrap(), "first");
+        assert_eq!(fs::read_to_string(second).unwrap(), "second");
+        for bad in ["../secret.txt", "sub/file.txt", ""] {
+            assert!(lib.detach_file("c1", bad).is_err());
+        }
+        assert!(lib.detach_file("c1", "missing.txt").is_err());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn detach_failure_keeps_original_file_and_membership() {
+        let (lib, dir) = temp_library("detach_failure");
+        lib.insert_category(category("c1", "资料")).unwrap();
+        let source = lib.category_dir("资料").join("重要.txt");
+        fs::write(&source, "keep me").unwrap();
+        // 保留目录被同名文件占用，操作必须失败且保留知识库内的原文件。
+        fs::write(dir.join("knowledge-removed"), "occupied").unwrap();
+        assert!(lib.detach_file("c1", "重要.txt").is_err());
+        assert_eq!(fs::read_to_string(source).unwrap(), "keep me");
+        assert_eq!(lib.file_count("c1"), 1);
         let _ = fs::remove_dir_all(dir);
     }
 

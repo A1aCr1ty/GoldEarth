@@ -170,7 +170,7 @@ pub fn import_notes_to_library(
         .map_err(state_err)
 }
 
-/// 从知识库移除一个文件
+/// 删除一个知识库文件（连同磁盘文件）
 #[tauri::command]
 pub fn delete_library_file(
     state: State<'_, AppState>,
@@ -183,6 +183,30 @@ pub fn delete_library_file(
         .delete_file(&category_id, &name)
         .map_err(state_err)?;
     Ok(state.storage.library().list_files(&category_id))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetachedLibraryFile {
+    files: Vec<LibraryFile>,
+    retained_path: String,
+}
+
+/// 移出知识库并保留文件，返回实际保存位置。
+#[tauri::command]
+pub fn detach_library_file(
+    state: State<'_, AppState>,
+    category_id: String,
+    name: String,
+) -> Result<DetachedLibraryFile, String> {
+    let library = state.storage.library();
+    let path = library
+        .detach_file(&category_id, &name)
+        .map_err(state_err)?;
+    Ok(DetachedLibraryFile {
+        files: library.list_files(&category_id),
+        retained_path: path.display().to_string(),
+    })
 }
 
 /// 文本类资料的预览内容；二进制返回 null

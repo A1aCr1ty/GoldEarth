@@ -25,6 +25,10 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "file_search_status",
+            "file_search_index",
+            "file_search_query",
+            "file_search_reveal",
             "archify_template",
             "prepare_archify_generation",
             "render_archify",
@@ -72,6 +76,7 @@ fn main() {
             "list_library_files",
             "import_library_files",
             "delete_library_file",
+            "detach_library_file",
             "read_library_text",
             "library_category_path",
             "available_indices",

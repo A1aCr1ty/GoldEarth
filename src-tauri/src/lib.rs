@@ -39,6 +39,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::file_search::file_search_status,
+            commands::file_search::file_search_index,
+            commands::file_search::file_search_query,
+            commands::file_search::file_search_reveal,
             commands::archify::archify_template,
             commands::archify::prepare_archify_generation,
             commands::archify::render_archify,
@@ -85,6 +89,7 @@ pub fn run() {
             commands::library::import_library_files,
             commands::library::import_notes_to_library,
             commands::library::delete_library_file,
+            commands::library::detach_library_file,
             commands::library::read_library_text,
             commands::library::library_category_path,
             commands::market::available_indices,

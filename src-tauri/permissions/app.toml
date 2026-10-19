@@ -12,6 +12,10 @@
 identifier = "allow-app-commands"
 description = "App 自己的全部命令，供主窗口使用。"
 commands.allow = [
+  "file_search_status",
+  "file_search_index",
+  "file_search_query",
+  "file_search_reveal",
   "archify_template",
   "prepare_archify_generation",
   "render_archify",
@@ -31,6 +35,7 @@ commands.allow = [
   "delete_category",
   "delete_library_category",
   "delete_library_file",
+  "detach_library_file",
   "delete_note",
   "fetch_xianyu_price",
   "fetch_public_price",

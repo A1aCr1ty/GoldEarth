@@ -38,6 +38,7 @@ export const tauri = {
   importLibraryFiles(categoryId: string, sources: string[]) { return invoke<import("@/types").LibraryFile[]>("import_library_files", { categoryId, sources }); },
   importNotesToLibrary(categoryId: string, noteIds: string[]) { return invoke<import("@/types").LibraryFile[]>("import_notes_to_library", { categoryId, noteIds }); },
   deleteLibraryFile(categoryId: string, name: string) { return invoke<import("@/types").LibraryFile[]>("delete_library_file", { categoryId, name }); },
+  detachLibraryFile(categoryId: string, name: string) { return invoke<{ files: import("@/types").LibraryFile[]; retainedPath: string }>("detach_library_file", { categoryId, name }); },
   readLibraryText(categoryId: string, name: string) { return invoke<string | null>("read_library_text", { categoryId, name }); },
   libraryCategoryPath(id: string) { return invoke<string | null>("library_category_path", { id }); },
   getStorageInfo() { return invoke<{ root: string; totalNotes: number; totalCategories: number }>("get_storage_info"); },

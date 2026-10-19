@@ -24,6 +24,7 @@ interface LibraryState {
   importFilesTo: (categoryId: string, sources: string[]) => Promise<void>;
   importNotesTo: (categoryId: string, noteIds: string[]) => Promise<void>;
   deleteFile: (name: string) => Promise<void>;
+  detachFile: (name: string) => Promise<string>;
 }
 
 /** 分类上的 fileCount 要跟着文件增删走，所以本地也维护一份 */
@@ -132,7 +133,15 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     const id = get().currentId;
     if (!id) return;
     const files = await tauri.deleteLibraryFile(id, name);
-    set((s) => ({ files, categories: withCount(s.categories, id, files.length) }));
+    set((s) => ({ ...(s.currentId === id ? { files } : {}), categories: withCount(s.categories, id, files.length) }));
+  },
+
+  async detachFile(name) {
+    const id = get().currentId;
+    if (!id) throw new Error("请先选择知识库分类");
+    const { files, retainedPath } = await tauri.detachLibraryFile(id, name);
+    set((s) => ({ ...(s.currentId === id ? { files } : {}), categories: withCount(s.categories, id, files.length) }));
+    return retainedPath;
   },
 }));
 

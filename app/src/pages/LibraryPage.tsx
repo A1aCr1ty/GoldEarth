@@ -3,6 +3,7 @@ import {
   BookOpen,
   FileText,
   FolderOpen,
+  FolderOutput,
   Image as ImageIcon,
   Pencil,
   Plus,
@@ -62,6 +63,7 @@ export default function LibraryPage() {
   const deleteCategory = useLibrary((s) => s.deleteCategory);
   const importFiles = useLibrary((s) => s.importFiles);
   const deleteFile = useLibrary((s) => s.deleteFile);
+  const detachFile = useLibrary((s) => s.detachFile);
 
   const agents = useAgents((s) => s.agents);
   const refreshAgents = useAgents((s) => s.refresh);
@@ -71,6 +73,7 @@ export default function LibraryPage() {
   const [preview, setPreview] = useState<{ name: string; text: string | null } | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [retainedPath, setRetainedPath] = useState<string | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -124,15 +127,35 @@ export default function LibraryPage() {
   }
 
   async function handleDeleteFile(file: LibraryFile) {
-    if (!confirm(`把「${file.name}」移出知识库？（文件会被删除）`)) return;
+    if (busy || !confirm(`删除「${file.name}」？\n知识库中的这份文件会从磁盘删除，无法撤销。若要保留文件，请使用「移出并保留」。`)) return;
+    setBusy(true);
+    setLocalError(null);
     try {
       await deleteFile(file.name);
     } catch (e) {
       setLocalError(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDetachFile(file: LibraryFile) {
+    if (busy || !confirm(`将「${file.name}」移出知识库并保留文件？\n文件会移至当前存储位置下独立的 knowledge-removed 文件夹，完成后显示保存路径。以后删除原分类也不会删除这份文件。`)) return;
+    setBusy(true);
+    setLocalError(null);
+    try {
+      const path = await detachFile(file.name);
+      setRetainedPath(path);
+      if (preview?.name === file.name) setPreview(null);
+    } catch (e) {
+      setLocalError(errText(e));
+    } finally {
+      setBusy(false);
     }
   }
 
   async function handleDeleteCategory(target: LibraryCategory) {
+    if (busy) return;
     if (!confirm(`删除分类「${target.name}」？\n里面的 ${target.fileCount} 份资料会一起删除，无法撤销。`)) return;
     try {
       await deleteCategory(target.id);
@@ -159,6 +182,17 @@ export default function LibraryPage() {
 
       {message && (
         <div className="shrink-0 border-b bg-destructive/10 px-4 py-1.5 text-xs text-destructive">{message}</div>
+      )}
+
+      {retainedPath && (
+        <div role="status" className="shrink-0 border-b bg-primary/5 px-4 py-2 text-xs">
+          <p className="mb-1">已移出知识库，文件已保留在以下位置，可通过「导入文件」重新加入：</p>
+          <div className="flex items-center gap-2">
+            <Input aria-label="保留文件的位置" readOnly value={retainedPath} className="h-7 min-w-0 flex-1 text-xs" onFocus={(e) => e.target.select()} />
+            <Button size="sm" variant="outline" className="h-7" onClick={() => void navigator.clipboard.writeText(retainedPath).catch(e => setLocalError(errText(e)))}>复制路径</Button>
+            <Button size="sm" variant="ghost" className="h-7" onClick={() => setRetainedPath(null)}>关闭</Button>
+          </div>
+        </div>
       )}
 
       <div className="flex min-h-0 flex-1">
@@ -286,10 +320,21 @@ export default function LibraryPage() {
                     {f.ext && <Badge variant="secondary" className="shrink-0 text-[0.625rem]">{f.ext}</Badge>}
                     <button
                       type="button"
+                      disabled={busy}
+                      className="flex shrink-0 items-center gap-1 rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+                      onClick={() => void handleDetachFile(f)}
+                      aria-label={`移出并保留：${f.name}`}
+                      title="移出知识库，保留文件"
+                    >
+                      <FolderOutput className="h-3 w-3" /> 移出并保留
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
                       className="shrink-0 rounded p-1 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => void handleDeleteFile(f)}
-                      aria-label={`移出知识库：${f.name}`}
-                      title="移出知识库"
+                      aria-label={`删除文件：${f.name}`}
+                      title="删除文件（从磁盘删除）"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
