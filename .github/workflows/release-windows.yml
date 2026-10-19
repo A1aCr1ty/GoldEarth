@@ -74,6 +74,12 @@ jobs:
       - name: Test local storage
         run: 'cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib db::'
 
+      - name: Test stock market and search
+        run: 'cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib market::'
+
+      - name: Test daily travel recommendations
+        run: 'cargo test --release --locked --manifest-path src-tauri/Cargo.toml --lib travel::'
+
       - name: Collect installer and checksums
         run: |
           New-Item -ItemType Directory -Path release-assets -Force | Out-Null

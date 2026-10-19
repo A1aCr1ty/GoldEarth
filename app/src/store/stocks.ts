@@ -39,7 +39,7 @@ interface StocksState {
   loadIndexCodes: () => Promise<void>;
 
   loadWatchlist: () => Promise<void>;
-  addWatch: (code: string) => Promise<void>;
+  addWatch: (code: string, name?: string) => Promise<boolean>;
   removeWatch: (code: StockCode) => Promise<void>;
   refreshAll: () => Promise<void>;
   refreshQuotes: () => Promise<void>;
@@ -106,14 +106,17 @@ export const useStocks = create<StocksState>((set, get) => ({
     }
   },
 
-  async addWatch(code) {
+  async addWatch(code, name = "") {
     try {
-      const next = [...get().watchlist, { code: code.trim(), name: "", group: "" }];
+      if (get().watchlist.some((item) => item.code === code.trim())) return true;
+      const next = [...get().watchlist, { code: code.trim(), name, group: "" }];
       const saved = await tauri.saveWatchlist(next);
       set({ watchlist: saved });
       void get().refreshQuotes();
+      return true;
     } catch (e) {
       set({ error: errText(e) });
+      return false;
     }
   },
 

@@ -5,8 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { lineContext, pickPushLine } from "@/lib/lines";
 import { tauri } from "@/lib/tauri";
 import type { Horoscope } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface TextPushProps {
+  compact?: boolean;
   /** 选中的日期（和天气、日历共用同一个值），点日历上的雨雪天这里也会跟着换 */
   date: string;
   /** 当前小时：用来区分早晚 */
@@ -64,12 +66,13 @@ function Stars({ value }: { value: number }) {
  * 「换一句」同时推进两块内容：诗句换成下一句，运势也走到下一个维度——
  * 填了生日就轮整体/爱情/事业/财运/健康，没填就轮十二星座。
  */
-export function TextPush({ date, hour, code, isDay, isToday }: TextPushProps) {
+export function TextPush({ date, hour, code, isDay, isToday, compact = false }: TextPushProps) {
   const context = useMemo(
     () => lineContext({ date, hour, code, isDay, isToday }),
     [date, hour, code, isDay, isToday]
   );
   const [step, setStep] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [hasBirthday, setHasBirthday] = useState(true);
   const [data, setData] = useState<Horoscope | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,6 +125,43 @@ export function TextPush({ date, hour, code, isDay, isToday }: TextPushProps) {
   const line = useMemo(() => pickPushLine(context, step), [context, step]);
   // 填了生日：step 轮维度；没填：step 已经在轮星座了，维度固定停在整体
   const aspect = data?.aspects[rotateSign ? 0 : step % data.aspects.length];
+
+  if (compact) return (
+    <>
+      <Card className="relative shrink-0 overflow-hidden bg-gradient-to-br from-primary/5 to-background">
+        <CardContent className="space-y-1.5 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground"><Sparkles className="h-3 w-3" />{isToday ? "今日推送" : "这天推送"}<span className="text-primary">{context.label}</span></span>
+            <div className="flex shrink-0 gap-1">
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[0.6875rem]" onClick={() => setStep(value => value + 1)}><Shuffle className="h-3 w-3" />换一句</Button>
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[0.6875rem]" onClick={() => setDetailsOpen(true)}>详情</Button>
+            </div>
+          </div>
+          <blockquote aria-live="polite" className="border-l-2 border-primary/40 pl-2">
+            <p title={line.text} className="font-quote line-clamp-2 text-sm leading-relaxed">{line.text}</p>
+            <footer className="truncate text-right text-[0.625rem] leading-4 text-muted-foreground" title={line.from}>—— {line.from}</footer>
+          </blockquote>
+          <div aria-live="polite" className="border-t pt-1.5">
+            {isToday && data && aspect && !horoError ? <>
+              <div className="flex flex-wrap items-center gap-x-2 text-[0.6875rem]"><span className="font-medium text-primary">{data.title}</span><span className="text-muted-foreground">{aspect.label}</span><Stars value={aspect.stars} /></div>
+              <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{aspect.text || "今天这一项暂时没有内容"}</p>
+            </> : <p className="line-clamp-2 text-[0.6875rem] text-muted-foreground">{!isToday ? "运势只提供当日这一份，切回今天即可查看。" : horoError ? `取运势失败：${horoError}` : loading ? "正在取运势…" : "暂时拿不到运势。"}</p>}
+          </div>
+        </CardContent>
+      </Card>
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-base">{date} · 文字推送</DialogTitle></DialogHeader>
+          <blockquote className="border-l-2 border-primary/40 pl-3"><p className="font-quote text-lg leading-relaxed">{line.text}</p><footer className="mt-2 text-right text-xs text-muted-foreground">—— {line.from}</footer></blockquote>
+          {isToday && data && aspect && <div className="space-y-2 border-t pt-3 text-sm leading-relaxed">
+            <p className="flex flex-wrap items-center gap-2 font-medium text-primary">{data.title} · {aspect.label}<Stars value={aspect.stars} /></p>
+            {data.shortComment && <p className="text-xs text-muted-foreground">{data.shortComment}</p>}
+            <p>{aspect.text}</p>
+            <p className="text-xs text-muted-foreground">{[data.todoYi, data.todoJi, data.luckyColor && `幸运色 ${data.luckyColor}`, data.luckyNumber && `幸运数 ${data.luckyNumber}`, data.luckyConstellation && `贵人星座 ${data.luckyConstellation}`].filter(Boolean).join(" · ")}</p>
+          </div>}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 
   return (
     <Card className="relative flex min-h-[10rem] flex-1 flex-col overflow-hidden">

@@ -8,6 +8,7 @@
 //! 保证界面不至于整块空掉。
 
 pub mod eastmoney;
+pub mod search;
 pub mod symbol;
 pub mod tencent;
 pub mod types;

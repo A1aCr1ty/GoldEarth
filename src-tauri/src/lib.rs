@@ -5,6 +5,7 @@ mod horoscope;
 mod market;
 mod public_prices;
 mod trending;
+mod travel;
 mod weather;
 mod xianyu_webview;
 
@@ -90,6 +91,7 @@ pub fn run() {
             commands::market::market_indices,
             commands::market::stock_quotes,
             commands::market::stock_quote,
+            commands::market::search_stocks,
             commands::market::stock_kline,
             commands::market::stock_trends,
             commands::market::market_rankings,
@@ -98,6 +100,7 @@ pub fn run() {
             commands::market::save_watchlist,
             commands::market::seed_watchlist,
             commands::weather::weather_report,
+            commands::travel::daily_travel,
             commands::weather::search_cities,
             commands::horoscope::horoscope_today,
             commands::trending::trending_sources,

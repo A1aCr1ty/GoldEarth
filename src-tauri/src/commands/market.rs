@@ -10,6 +10,11 @@ fn state_err<E: std::fmt::Display>(e: E) -> String {
     e.to_string()
 }
 
+#[tauri::command]
+pub async fn search_stocks(query: String) -> Result<Vec<market::search::StockSuggestion>, String> {
+    market::search::search_stocks(&query).await
+}
+
 /// 可供勾选的指数清单，供前端渲染选择器。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

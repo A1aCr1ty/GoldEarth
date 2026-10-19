@@ -1,5 +1,16 @@
 export type CategoryId = string;
 export interface CategoryHtmlFile { categoryId: CategoryId | null; name: string; size: number; updatedAt: string }
+export interface TravelDestination {
+  id: string; name: string; region: string; theme: string; intro: string; season: string;
+  days: number; route: { title: string; stops: string[] }[];
+  transport: string; stay: string; food: string[]; budget: string; tips: string[];
+  referenceTitle: string; referenceUrl: string;
+}
+export interface DailyTravel {
+  schemaVersion: number; date: string; destination: TravelDestination;
+  sources: { title: string; url: string; snippet: string }[];
+  researchedAt: string | null; status: "live" | "cached" | "offline"; warning: string | null;
+}
 export interface Category {
   id: CategoryId;
   name: string;
@@ -256,6 +267,12 @@ export interface WatchItem {
   code: StockCode;
   name: string;
   group: string;
+}
+
+export interface StockSuggestion {
+  code: StockCode;
+  name: string;
+  market: string;
 }
 
 /** 可勾选的指数 */

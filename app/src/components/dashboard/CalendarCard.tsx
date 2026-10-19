@@ -19,6 +19,7 @@ import { weatherIcon, weatherText } from "@/lib/weatherCodes";
 import type { WeatherDay } from "@/types";
 
 interface CalendarCardProps {
+  compact?: boolean;
   /** 当前选中的日期（YYYY-MM-DD），和天气卡片共用同一个值 */
   selected: string;
   onSelect: (date: string) => void;
@@ -26,7 +27,7 @@ interface CalendarCardProps {
   forecast: WeatherDay[];
 }
 
-export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps) {
+export function CalendarCard({ selected, onSelect, forecast, compact = false }: CalendarCardProps) {
   const today = useMemo(() => new Date(), []);
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -51,8 +52,8 @@ export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps
   }
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-2">
+    <Card className="min-w-0">
+      <CardHeader className={cn("flex-row items-center justify-between space-y-0", compact ? "p-2.5 pb-1" : "p-4 pb-2")}>
         <CardTitle className="text-sm">{monthLabel(cursor)}</CardTitle>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title="上个月" onClick={() => shiftMonth(-1)}>
@@ -66,8 +67,8 @@ export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <div className="grid grid-cols-7 gap-y-1 text-center">
+      <CardContent className={compact ? "p-2.5 pt-0" : "p-4 pt-0"}>
+        <div className={cn("grid grid-cols-7 text-center", compact ? "gap-y-0" : "gap-y-1")}>
           {WEEKDAY_NAMES.map((name, index) => (
             <span
               key={name}
@@ -90,7 +91,8 @@ export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps
                 onClick={() => onSelect(value)}
                 title={day ? `${value} ${weatherText(day.code)}` : value}
                 className={cn(
-                  "mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-md text-xs transition-colors",
+                  "mx-auto flex min-w-0 w-full flex-col items-center justify-center rounded-md text-xs transition-colors",
+                  compact ? "h-6" : "h-11",
                   inMonth ? "text-foreground" : "text-muted-foreground/50",
                   isToday && !isSelected && "font-semibold text-primary ring-1 ring-primary/40",
                   isSelected ? "bg-primary font-semibold text-primary-foreground" : "hover:bg-accent"
@@ -99,23 +101,23 @@ export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps
                 <span className="leading-none tabular-nums">{date.getDate()}</span>
                 {/* 占位符让有/没有天气的格子高度一致 */}
                 {Icon ? (
-                  <Icon className={cn("mt-0.5 h-3 w-3", isSelected ? "text-primary-foreground" : "text-primary/70")} />
+                  <Icon className={cn(compact ? "mt-px h-2.5 w-2.5" : "mt-0.5 h-3 w-3", isSelected ? "text-primary-foreground" : "text-primary/70")} />
                 ) : (
-                  <span className="mt-0.5 h-3 w-3" />
+                  <span className={compact ? "mt-px h-2.5 w-2.5" : "mt-0.5 h-3 w-3"} />
                 )}
               </button>
             );
           })}
         </div>
 
-        <div className="mt-3 space-y-1.5 border-t pt-3 text-xs">
+        {compact ? <p className="mt-1 border-t pt-1 text-[0.625rem] text-muted-foreground">{selected} · {weekdayLabel(selectedDate)}</p> : <div className="mt-3 space-y-1 border-t pt-3 text-xs">
           <p className="flex items-center gap-1.5 font-medium">
             <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             {`${selected} ${weekdayLabel(selectedDate)}`}
           </p>
-          <p className="text-muted-foreground">
+          {!compact && <p className="text-muted-foreground">
             {`${relativeToToday(selectedDate, today)} · 第 ${isoWeek(selectedDate)} 周 · 全年第 ${dayOfYear(selectedDate)} 天`}
-          </p>
+          </p>}
           {selectedWeather ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
               <span className="text-foreground">
@@ -125,19 +127,19 @@ export function CalendarCard({ selected, onSelect, forecast }: CalendarCardProps
                 <Umbrella className="h-3 w-3" />
                 {`${Math.round(selectedWeather.precipitationProbability)}%`}
               </span>
-              <span className="inline-flex items-center gap-1">
+              {!compact && <span className="inline-flex items-center gap-1">
                 <Sunrise className="h-3 w-3" />
                 {selectedWeather.sunrise || "--"}
-              </span>
-              <span className="inline-flex items-center gap-1">
+              </span>}
+              {!compact && <span className="inline-flex items-center gap-1">
                 <Sunset className="h-3 w-3" />
                 {selectedWeather.sunset || "--"}
-              </span>
+              </span>}
             </div>
           ) : (
             <p className="text-muted-foreground/70">这一天不在 7 天预报范围内</p>
           )}
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );

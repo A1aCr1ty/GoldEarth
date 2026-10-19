@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStocks } from "@/store/stocks";
 import { IndexTicker, PanelTitle, RankBoard, WatchList } from "@/components/stock/Panels";
@@ -10,6 +9,7 @@ import { KlineChart, type SubIndicator } from "@/components/stock/KlineChart";
 import { TimeChart } from "@/components/stock/TimeChart";
 import { StockAgentPanel } from "@/components/stock/StockAgentPanel";
 import { IndexPicker } from "@/components/stock/IndexPicker";
+import { StockSearch } from "@/components/stock/StockSearch";
 import type { KlinePeriod, RankKind } from "@/types";
 
 const PERIODS: { value: KlinePeriod; label: string }[] = [
@@ -35,7 +35,6 @@ const RANKS: { value: RankKind; label: string }[] = [
 export default function StocksPage() {
   const s = useStocks();
   const [rankKind, setRankKind] = useState<RankKind>("gainers");
-  const [codeInput, setCodeInput] = useState("");
   const [rightTab, setRightTab] = useState<"market" | "agent">("market");
 
   useEffect(() => {
@@ -59,16 +58,6 @@ export default function StocksPage() {
     void s.loadRankings(rankKind);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rankKind]);
-
-  async function handleAdd() {
-    const code = codeInput.trim();
-    if (!code) return;
-    await s.addWatch(code);
-    setCodeInput("");
-    // 切到刚加的股票
-    const list = useStocks.getState().watchlist;
-    if (list.length > 0) s.setCurrent(list[list.length - 1].code);
-  }
 
   const ranks = s.rankings[rankKind] ?? [];
 
@@ -98,22 +87,27 @@ export default function StocksPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* 左列：自选股 + 榜单 */}
-        <aside className="flex w-[clamp(8.5rem,18%,16rem)] shrink-0 flex-col border-r">
-          <div className="h-[45%] border-b">
+        <aside className="flex min-h-0 w-[clamp(12rem,23%,18rem)] shrink-0 flex-col overflow-hidden border-r bg-card/30">
+          <div className="min-h-0 flex-[3] overflow-hidden border-b">
             <WatchList
               items={s.watchlist}
               quotes={s.quotes}
               current={s.current}
               onSelect={(c) => s.setCurrent(c)}
               onRemove={(c) => void s.removeWatch(c)}
+              toolbar={<StockSearch items={s.watchlist} onAdd={async (stock) => {
+                const added = await s.addWatch(stock.code, stock.name);
+                if (added) s.setCurrent(stock.code);
+                return added;
+              }} />}
             />
           </div>
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-[2] flex-col overflow-hidden">
             <PanelTitle>
               <Tabs value={rankKind} onValueChange={(v) => setRankKind(v as RankKind)}>
-                <TabsList className="h-6 p-0">
+                <TabsList className="grid h-6 w-full grid-cols-4 p-0">
                   {RANKS.map((r) => (
-                    <TabsTrigger key={r.value} value={r.value} className="h-6 px-2 text-[0.6875rem]">
+                    <TabsTrigger key={r.value} value={r.value} className="h-6 min-w-0 px-1.5 text-[0.6875rem]">
                       {r.label}
                     </TabsTrigger>
                   ))}
@@ -124,24 +118,10 @@ export default function StocksPage() {
               <RankBoard items={ranks} onSelect={(c) => s.setCurrent(c)} />
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5 border-t p-2">
-            <Input
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleAdd();
-              }}
-              placeholder="加自选，如 600519"
-              className="h-7 text-xs"
-            />
-            <Button size="sm" className="h-7 shrink-0" onClick={() => void handleAdd()}>
-              添加
-            </Button>
-          </div>
         </aside>
 
         {/* 中列：头部 + 图表 */}
-        <section className="flex min-w-[16rem] flex-1 flex-col">
+        <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <StockHeader quote={s.detail} />
           <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b px-3 py-1.5">
             {PERIODS.map((p) => (

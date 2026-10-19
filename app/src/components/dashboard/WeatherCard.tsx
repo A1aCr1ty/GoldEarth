@@ -26,6 +26,7 @@ import { useWeather } from "@/store/weather";
 import type { CityOption, WeatherDay } from "@/types";
 
 interface WeatherCardProps {
+  compact?: boolean;
   /** 当前选中的日期（YYYY-MM-DD），和日历共用同一个值 */
   selectedDate: string;
   onSelectDate: (date: string) => void;
@@ -51,7 +52,7 @@ function dayLabel(date: string): string {
   return `${`${month}-${day}`} 周${WEEKDAY_NAMES[(parsed.getDay() + 6) % 7]}`;
 }
 
-export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
+export function WeatherCard({ selectedDate, onSelectDate, compact = false }: WeatherCardProps) {
   const { report, loading, error, load, setCity } = useWeather();
   const [editing, setEditing] = useState(false);
 
@@ -70,8 +71,8 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
   const HeroIcon: LucideIcon = report ? heroIcon : Cloud;
 
   return (
-    <Card>
-      <CardContent className="p-4">
+    <Card className="min-w-0">
+      <CardContent className={compact ? "p-3" : "p-4"}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-1.5 text-sm">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -126,8 +127,8 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
 
         {report && (
           <>
-            <div className="mt-4 flex items-center gap-5">
-              <HeroIcon className="h-14 w-14 shrink-0 text-primary" strokeWidth={1.5} />
+            <div className={cn("flex items-center", compact ? "mt-2 gap-3" : "mt-4 gap-5")}>
+              <HeroIcon className={cn("shrink-0 text-primary", compact ? "h-10 w-10" : "h-14 w-14")} strokeWidth={1.5} />
               {showingOtherDay ? (
                 <div>
                   <div className="flex items-baseline gap-1.5">
@@ -163,7 +164,7 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
               )}
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <div className={cn("grid grid-cols-3 gap-2 text-xs text-muted-foreground", compact ? "mt-2" : "mt-4")}>
               {showingOtherDay ? (
                 <>
                   <Meta icon={Sunrise} label="日出" value={selectedDay.sunrise || "--"} />
@@ -189,7 +190,7 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
               )}
             </div>
 
-            <div className="mt-4 grid grid-cols-7 gap-1 border-t pt-3">
+            <div className={cn("grid grid-cols-7 gap-1 border-t", compact ? "mt-2 pt-2" : "mt-4 pt-3")}>
               {report.days.map((day, index) => (
                 <ForecastCell
                   key={day.date}
@@ -197,10 +198,11 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
                   index={index}
                   selected={day.date === selectedDate}
                   onSelect={onSelectDate}
+                  compact={compact}
                 />
               ))}
             </div>
-            <p className="mt-2 text-[0.6875rem] text-muted-foreground">点一天，日历会同步跳到这一天</p>
+            {!compact && <p className="mt-2 text-[0.6875rem] text-muted-foreground">点一天，日历会同步跳到这一天</p>}
           </>
         )}
       </CardContent>
@@ -210,7 +212,7 @@ export function WeatherCard({ selectedDate, onSelectDate }: WeatherCardProps) {
 
 function Meta({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex min-w-0 items-center gap-1.5" title={`${label} ${value}`}>
       <Icon className="h-3.5 w-3.5 shrink-0" />
       <span className="shrink-0">{label}</span>
       <span className="truncate tabular-nums text-foreground">{value}</span>
@@ -223,11 +225,13 @@ function ForecastCell({
   index,
   selected,
   onSelect,
+  compact = false,
 }: {
   day: WeatherDay;
   index: number;
   selected: boolean;
   onSelect: (date: string) => void;
+  compact?: boolean;
 }) {
   const Icon = weatherIcon(day.code);
   const date = parseYmd(day.date);
@@ -238,7 +242,8 @@ function ForecastCell({
       onClick={() => onSelect(day.date)}
       title={`${day.date} ${weatherText(day.code)} ${round(day.min)}°~${round(day.max)}°`}
       className={cn(
-        "flex flex-col items-center gap-0.5 rounded-md px-1 py-2 text-center transition-colors",
+        "flex min-w-0 flex-col items-center gap-0.5 rounded-md px-1 text-center transition-colors",
+        compact ? "py-1" : "py-2",
         selected ? "bg-primary/10 ring-1 ring-primary/40" : "hover:bg-accent"
       )}
     >
@@ -246,11 +251,12 @@ function ForecastCell({
         {label}
       </span>
       <Icon className="my-0.5 h-4 w-4" />
+      {compact ? <span className="whitespace-nowrap text-[0.625rem] tabular-nums">{round(day.max)}°/{round(day.min)}°</span> : <>
       <span className="text-xs tabular-nums">{round(day.max)}°</span>
-      <span className="text-[0.6875rem] text-muted-foreground tabular-nums">{round(day.min)}°</span>
-      <span className="text-[0.625rem] text-muted-foreground">
+      <span className="text-[0.6875rem] text-muted-foreground tabular-nums">{round(day.min)}°</span></>}
+      {!compact && <span className="text-[0.625rem] text-muted-foreground">
         {day.precipitationProbability > 0 ? `${round(day.precipitationProbability)}%` : "—"}
-      </span>
+      </span>}
     </button>
   );
 }

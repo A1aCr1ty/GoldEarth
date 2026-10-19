@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 export const tauri = {
   ping(): Promise<string> { return invoke<string>("ping"); },
+  dailyTravel(date: string, force = false) { return invoke<import("@/types").DailyTravel>("daily_travel", { date, force }); },
   listCategories() { return invoke<import("@/types").Category[]>("list_categories"); },
   listCategoryHtmlFiles() { return invoke<import("@/types").CategoryHtmlFile[]>("list_category_html_files"); },
   readCategoryHtmlFile(categoryId: string | null, name: string) { return invoke<string>("read_category_html_file", { categoryId, name }); },
@@ -54,6 +55,7 @@ export const tauri = {
   marketRankings(kind: import("@/types").RankKind, limit?: number) { return invoke<import("@/types").RankItem[]>("market_rankings", { kind, limit: limit ?? 20 }); },
   stockFundFlow(code: string) { return invoke<import("@/types").FundFlow>("stock_fund_flow", { code }); },
   getWatchlist() { return invoke<import("@/types").WatchItem[]>("get_watchlist"); },
+  searchStocks(query: string) { return invoke<import("@/types").StockSuggestion[]>("search_stocks", { query }); },
   saveWatchlist(items: import("@/types").WatchItem[]) { return invoke<import("@/types").WatchItem[]>("save_watchlist", { items }); },
   seedWatchlist(items: import("@/types").WatchItem[]) { return invoke<import("@/types").WatchItem[]>("seed_watchlist", { items }); },
   // ===== 天气 =====

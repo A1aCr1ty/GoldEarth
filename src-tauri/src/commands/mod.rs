@@ -8,6 +8,7 @@ pub mod notes;
 pub mod prices;
 pub mod reader;
 pub mod trending;
+pub mod travel;
 pub mod weather;
 
 use std::sync::Arc;
