@@ -10,16 +10,20 @@ interface TravelState {
 }
 let requestId = 0;
 let pending: { date: string; task: Promise<void> } | null = null;
+let lastCompletedAt = 0;
 
 export const useTravel = create<TravelState>((set, get) => ({
   report: null, loading: false,
   load(date, force = false) {
-    if (!force && get().report?.date === date) return Promise.resolve();
-    if (!force && pending?.date === date) return pending.task;
+    // Retry offline snapshots after a short cooldown; concurrent refreshes share
+    // the same request rather than queueing behind the backend load lock.
+    if (pending?.date === date) return pending.task;
+    const saved = get().report;
+    if (!force && saved?.date === date && (saved.status !== "offline" || Date.now() - lastCompletedAt < 30_000)) return Promise.resolve();
     const id = ++requestId;
     set({ loading: true, error: undefined });
     const task = tauri.dailyTravel(date, force).then((report) => {
-      if (id === requestId) set({ report });
+      if (id === requestId) { lastCompletedAt = Date.now(); set({ report }); }
     }).catch((error) => {
       if (id === requestId) set({ error: String(error) });
     }).finally(() => {

@@ -4,19 +4,19 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function load(path, requireMock) {
+function load(path, requireMock, context = {}) {
   const module = { exports: {} };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve(path), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, { module, exports: module.exports, require: requireMock });
+  }).outputText, { module, exports: module.exports, require: requireMock, ...context });
   return module.exports;
 }
-function setup(request) {
+function setup(request, clock) {
   const { useTravel } = load('../src/store/travel.ts', name => {
     if (name === 'zustand') return require('zustand');
     if (name === '@/lib/tauri') return { tauri: { dailyTravel: request } };
     throw Error(name);
-  });
+  }, clock ? { Date: clock } : {});
   return useTravel;
 }
 const report = date => ({ date, status: 'live', sources: [] });
@@ -27,10 +27,24 @@ test('one day shares pending requests and reuses the completed recommendation', 
   const first = store.getState().load('2026-10-16');
   const second = store.getState().load('2026-10-16');
   assert.equal(first, second);
+  assert.equal(first, store.getState().load('2026-10-16', true));
   complete(report('2026-10-16')); await first;
   await store.getState().load('2026-10-16');
   assert.equal(calls, 1);
   assert.equal(store.getState().loading, false);
+});
+
+test('an offline recommendation is retried after cooldown instead of cached for the entire day', async () => {
+  let calls = 0, now = 1000;
+  const store = setup(async date => { calls++; return { ...report(date), status: 'offline' }; }, { now: () => now });
+  await store.getState().load('2026-10-19');
+  await store.getState().load('2026-10-19');
+  assert.equal(calls, 1);
+  now += 31_000;
+  await store.getState().load('2026-10-19');
+  assert.equal(calls, 2);
+  await store.getState().load('2026-10-19', true);
+  assert.equal(calls, 3);
 });
 
 test('crossing midnight ignores a late response for the previous day', async () => {
@@ -62,7 +76,7 @@ test('the travel card labels offline plans honestly and renders the complete gui
     if (name === 'react/jsx-runtime') return require('react/jsx-runtime');
     if (name === '@/store/travel') return { useTravel: () => ({ report: {
       schemaVersion: 1, date: '2026-10-16', status: 'offline', destination,
-      sources: [], researchedAt: null, warning: '联网搜索失败',
+      sources: [], researchedAt: null, warning: '联网搜索失败', diagnostics: ['搜狗：请求超时', 'Bing RSS：RSS 为空或仅返回无关结果'],
     }, loading: false, load: async () => {} }) };
     if (name === '@/lib/tauri') return { tauri: {} };
     return new Proxy({}, { get: () => ({ children }) => React.createElement('div', null, children) });
@@ -70,5 +84,7 @@ test('the travel card labels offline plans honestly and renders the complete gui
   const html = require('react-dom/server').renderToStaticMarkup(React.createElement(DailyTravelCard, { date: '2026-10-16' }));
   assert.match(html, /本地路线参考/);
   assert.doesNotMatch(html, /已联网检索/);
+  assert.match(html, /检索详情/);
+  assert.match(html, /搜狗：请求超时/);
   for (const text of ['杭州', '断桥', '交通与住宿', '吃点当地的', '不含往返大交通', '联网搜索失败']) assert.ok(html.includes(text), text);
 });

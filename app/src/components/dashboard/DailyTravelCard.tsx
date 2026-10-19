@@ -62,7 +62,11 @@ export function DailyTravelCard({ date, compact = false }: { date: string; compa
               <p className={`${compact ? "mt-2 line-clamp-2 text-xs" : "mt-3 text-sm"} leading-relaxed text-muted-foreground`}>{place.intro}</p>
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"><MapPin className="mt-0.5 h-3 w-3 shrink-0" />{place.season}</p>
             </div>
-            {(report.warning || error) && <p role="status" className="border-y border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-300">{error || report.warning}</p>}
+            {(report.warning || error) && <div role="status" className="border-y border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+              <p>{error || report.warning}</p>
+              {!!report.diagnostics?.length && <details className="mt-1"><summary className="cursor-pointer">检索详情</summary><ul className="mt-1 space-y-1">{report.diagnostics.map((detail, index) => <li key={index}>{detail}</li>)}</ul></details>}
+              {report.status === "offline" && <button type="button" className="mt-1 underline underline-offset-2" onClick={() => void openSource(`https://www.so.com/s?q=${encodeURIComponent(`${place.name} 旅游 攻略`)}`, `${place.name} · 手动搜索攻略`)}>打开搜索页面手动查看 ↗</button>}
+            </div>}
             <div className={compact ? "min-h-0 flex-1 overflow-y-auto p-3" : "p-4"}>
               <div className="mb-2 flex items-center gap-1.5 text-xs font-medium"><Route className="h-3.5 w-3.5 text-primary" />轻松游 · 参考路线</div>
               <div className="grid gap-2 sm:grid-cols-2">

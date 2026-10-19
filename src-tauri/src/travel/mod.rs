@@ -1,8 +1,9 @@
 //! 每日国内旅行灵感：日期轮换路线参考，联网聚合相关攻略，保存当天检索结果。
+mod search;
 use chrono::{Datelike, NaiveDate, Utc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fs, path::Path};
+use std::{fs, path::Path};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteDay {
@@ -48,6 +49,8 @@ pub struct DailyTravel {
     /// live / cached / offline；不能把无检索结果的本地路线标作联网生成。
     pub status: String,
     pub warning: Option<String>,
+    #[serde(default)]
+    pub diagnostics: Vec<String>,
 }
 
 static CATALOG: Lazy<Vec<Destination>> = Lazy::new(|| {
@@ -91,21 +94,8 @@ pub async fn daily(path: &Path, date: &str, force: bool) -> Result<DailyTravel, 
             return Ok(saved.clone());
         }
     }
-    let guide_query = format!("{}旅游攻略", destination.name);
-    let reservation_query = format!("{}景点预约交通攻略", destination.name);
-    let (guide, reservations) = tokio::join!(
-        search(&guide_query, &destination),
-        search(&reservation_query, &destination)
-    );
-    let mut seen = HashSet::new();
-    let mut sources = Vec::new();
-    for list in [guide, reservations].into_iter().flatten() {
-        for source in list {
-            if seen.insert(source.url.clone()) {
-                sources.push(source);
-            }
-        }
-    }
+    let outcome = search::search(&destination).await;
+    let mut sources = outcome.sources;
     sources.sort_by_key(|s| {
         !reqwest::Url::parse(&s.url)
             .ok()
@@ -116,6 +106,7 @@ pub async fn daily(path: &Path, date: &str, force: bool) -> Result<DailyTravel, 
     if sources.is_empty() {
         if let Some(mut saved) = cached {
             saved.warning = Some("本次联网检索未成功，保留今天上次检索到的攻略。".into());
+            saved.diagnostics = outcome.diagnostics;
             return Ok(saved);
         }
         return Ok(DailyTravel {
@@ -126,8 +117,10 @@ pub async fn daily(path: &Path, date: &str, force: bool) -> Result<DailyTravel, 
             researched_at: None,
             status: "offline".into(),
             warning: Some(
-                "暂未检索到可用的相关攻略，当前展示本地路线参考，可稍后重试联网搜索。".into(),
+                "多个搜索来源暂未返回可用攻略，当前展示本地路线参考。可查看检索详情，或稍后刷新。"
+                    .into(),
             ),
+            diagnostics: outcome.diagnostics,
         });
     }
     let mut report = DailyTravel {
@@ -138,6 +131,7 @@ pub async fn daily(path: &Path, date: &str, force: bool) -> Result<DailyTravel, 
         researched_at: Some(Utc::now().to_rfc3339()),
         status: "live".into(),
         warning: None,
+        diagnostics: outcome.diagnostics,
     };
     if let Err(error) = save_cache(path, &report) {
         report.warning = Some(format!("攻略已获取，但本地缓存未保存：{error}"));
@@ -226,14 +220,8 @@ fn parse_results(raw: &str, destination: &Destination) -> Result<Vec<TravelSourc
         .filter_map(|item| {
             let title = plain_text(&item.title, 100);
             let snippet = plain_text(&item.description, 160);
-            let text = format!("{title} {snippet}");
             // 搜索服务偶尔返回无关结果，必须同时匹配目的地和旅游主题。
-            if !text.contains(&destination.name)
-                || !["旅游", "旅行", "攻略", "游玩", "景点", "预约", "行程"]
-                    .iter()
-                    .any(|word| text.contains(word))
-                || !safe_url(&item.link)
-            {
+            if !search::relevant(&title, &snippet, destination) || !safe_url(&item.link) {
                 return None;
             }
             Some(TravelSource {
@@ -244,22 +232,6 @@ fn parse_results(raw: &str, destination: &Destination) -> Result<Vec<TravelSourc
         })
         .take(6)
         .collect())
-}
-
-async fn search(query: &str, destination: &Destination) -> Result<Vec<TravelSource>, String> {
-    let response = crate::trending::http::client()
-        .get("https://www.bing.com/search")
-        .query(&[("format", "rss"), ("q", query)])
-        .send()
-        .await
-        .map_err(|e| e.to_string())?
-        .error_for_status()
-        .map_err(|e| e.to_string())?;
-    let raw = response.text().await.map_err(|e| e.to_string())?;
-    if raw.len() > 1_000_000 {
-        return Err("搜索结果过大".into());
-    }
-    parse_results(&raw, destination)
 }
 
 #[cfg(test)]
@@ -312,6 +284,7 @@ mod tests {
             researched_at: Some("2026-10-16T00:00:00Z".into()),
             status: "live".into(),
             warning: None,
+            diagnostics: vec![],
         };
         save_cache(&path, &report).unwrap();
         save_cache(&path, &report).unwrap();
@@ -322,13 +295,14 @@ mod tests {
             "cached"
         );
         assert!(read_cache(&path, "2026-10-17", &destination).is_none());
+        // 旧版本缓存没有 diagnostics，升级后仍应可以继续读取。
+        let mut legacy = serde_json::to_value(&report).unwrap();
+        legacy.as_object_mut().unwrap().remove("diagnostics");
+        fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+        assert!(read_cache(&path, "2026-10-16", &destination)
+            .unwrap()
+            .diagnostics
+            .is_empty());
         fs::remove_dir_all(root).unwrap();
-    }
-    #[tokio::test]
-    #[ignore = "访问真实联网搜索"]
-    async fn live_search_finds_related_travel_sources() {
-        let destination = CATALOG.iter().find(|d| d.name == "杭州").unwrap();
-        let result = search("杭州旅游攻略", destination).await.unwrap();
-        assert!(!result.is_empty());
     }
 }

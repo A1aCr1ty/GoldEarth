@@ -10,6 +10,7 @@ export interface DailyTravel {
   schemaVersion: number; date: string; destination: TravelDestination;
   sources: { title: string; url: string; snippet: string }[];
   researchedAt: string | null; status: "live" | "cached" | "offline"; warning: string | null;
+    diagnostics?: string[];
 }
 export interface Category {
   id: CategoryId;
