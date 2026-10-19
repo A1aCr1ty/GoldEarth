@@ -25,6 +25,9 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "tracker_bootstrap",
+            "tracker_report",
+            "tracker_mutate",
             "housing_bootstrap",
             "housing_report",
             "housing_communities",

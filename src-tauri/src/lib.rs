@@ -5,6 +5,7 @@ mod horoscope;
 mod housing;
 mod market;
 mod public_prices;
+mod trackers;
 mod trending;
 mod travel;
 mod weather;
@@ -40,6 +41,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::trackers::tracker_bootstrap,
+            commands::trackers::tracker_report,
+            commands::trackers::tracker_mutate,
             commands::housing::housing_bootstrap,
             commands::housing::housing_report,
             commands::housing::housing_communities,

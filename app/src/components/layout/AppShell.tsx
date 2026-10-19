@@ -4,12 +4,14 @@ import { cn } from "@/lib/utils";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
-import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags, Network, Search, Building2 } from "lucide-react";
+import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags, Network, Search, Building2, Car, Gem } from "lucide-react";
 const nav = [
   { to: "/home", label: "天气", icon: LayoutDashboard },
   { to: "/explore", label: "冲浪", icon: Compass },
   { to: "/prices", label: "价格", icon: Tags },
   { to: "/housing", label: "房价趋势", icon: Building2 },
+  { to: "/cars", label: "汽车销量价格", icon: Car },
+  { to: "/metals", label: "金属价格趋势", icon: Gem },
   { to: "/library", label: "知识库", icon: BookOpen },
   { to: "/files", label: "文件搜索", icon: Search },
   { to: "/stocks", label: "股票", icon: TrendingUp },
@@ -48,7 +50,7 @@ export function AppShell() {
         <div className="flex h-14 items-center px-4 border-b">
           <span className="truncate text-lg font-semibold tracking-tight">GoldEarth</span>
         </div>
-        <nav className="flex-1 space-y-1 p-2">
+        <nav className="min-h-0 flex-1 overflow-y-auto space-y-1 p-2">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}

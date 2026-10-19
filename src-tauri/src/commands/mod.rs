@@ -9,6 +9,7 @@ pub mod market;
 pub mod notes;
 pub mod prices;
 pub mod reader;
+pub mod trackers;
 pub mod trending;
 pub mod travel;
 pub mod weather;
