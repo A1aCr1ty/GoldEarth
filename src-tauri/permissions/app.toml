@@ -12,6 +12,14 @@
 identifier = "allow-app-commands"
 description = "App 自己的全部命令，供主窗口使用。"
 commands.allow = [
+  "housing_bootstrap",
+  "housing_report",
+  "housing_communities",
+  "housing_watch",
+  "housing_remove",
+  "housing_observe",
+  "housing_source_open",
+  "housing_source_read",
   "file_search_status",
   "file_search_index",
   "file_search_query",

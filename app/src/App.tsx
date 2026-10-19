@@ -11,6 +11,7 @@ import ExplorePage from "@/pages/ExplorePage";
 import PricePage from "@/pages/PricePage";
 import ArchifyPage from "@/pages/ArchifyPage";
 import FileSearchPage from "@/pages/FileSearchPage";
+import HousingPage from "@/pages/HousingPage";
 export default function App() {
   return (
     <HashRouter>
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/archify" element={<ArchifyPage />} />
           <Route path="/files" element={<FileSearchPage />} />
+          <Route path="/housing" element={<HousingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>

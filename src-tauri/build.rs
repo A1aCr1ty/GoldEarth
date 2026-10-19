@@ -25,6 +25,14 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "housing_bootstrap",
+            "housing_report",
+            "housing_communities",
+            "housing_watch",
+            "housing_remove",
+            "housing_observe",
+            "housing_source_open",
+            "housing_source_read",
             "file_search_status",
             "file_search_index",
             "file_search_query",

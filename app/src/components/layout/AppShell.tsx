@@ -4,11 +4,12 @@ import { cn } from "@/lib/utils";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
-import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags, Network, Search } from "lucide-react";
+import { BookOpen, FolderTree, FileText, Bot, LayoutDashboard, Settings as SettingsIcon, TrendingUp, Compass, Tags, Network, Search, Building2 } from "lucide-react";
 const nav = [
   { to: "/home", label: "天气", icon: LayoutDashboard },
   { to: "/explore", label: "冲浪", icon: Compass },
   { to: "/prices", label: "价格", icon: Tags },
+  { to: "/housing", label: "房价趋势", icon: Building2 },
   { to: "/library", label: "知识库", icon: BookOpen },
   { to: "/files", label: "文件搜索", icon: Search },
   { to: "/stocks", label: "股票", icon: TrendingUp },

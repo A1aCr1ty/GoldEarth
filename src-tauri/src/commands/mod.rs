@@ -3,6 +3,7 @@ pub mod archify;
 pub mod categories;
 pub mod file_search;
 pub mod horoscope;
+pub mod housing;
 pub mod library;
 pub mod market;
 pub mod notes;

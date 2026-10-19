@@ -2,6 +2,7 @@ mod agents;
 mod commands;
 mod db;
 mod horoscope;
+mod housing;
 mod market;
 mod public_prices;
 mod trending;
@@ -39,6 +40,14 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::housing::housing_bootstrap,
+            commands::housing::housing_report,
+            commands::housing::housing_communities,
+            commands::housing::housing_watch,
+            commands::housing::housing_remove,
+            commands::housing::housing_observe,
+            commands::housing::housing_source_open,
+            commands::housing::housing_source_read,
             commands::file_search::file_search_status,
             commands::file_search::file_search_index,
             commands::file_search::file_search_query,
