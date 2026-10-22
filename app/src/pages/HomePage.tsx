@@ -67,7 +67,7 @@ export default function HomePage() {
               isToday={selected === today}
             />
           </div>
-          <DailyTravelCard compact date={today} />
+          <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain"><DailyTravelCard compact date={today} /></div>
       </div>
       <Dialog open={linksOpen} onOpenChange={setLinksOpen}>
         <DialogContent><DialogHeader><DialogTitle>快捷入口</DialogTitle></DialogHeader><QuickLinks /></DialogContent>

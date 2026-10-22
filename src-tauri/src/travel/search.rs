@@ -159,7 +159,7 @@ fn parse_html(
 }
 
 async fn fetch(provider: Provider, destination: &Destination) -> Result<Vec<TravelSource>, String> {
-    let query = format!("{} 旅游 攻略", destination.name);
+    let query = format!("{} {}天 自由行 旅游攻略 交通 住宿 预约", destination.name, destination.days);
     let key = match provider {
         Provider::So360 => "q",
         Provider::Sogou => "query",
@@ -359,12 +359,12 @@ mod tests {
     #[ignore = "访问真实联网搜索"]
     async fn live_dali_and_hangzhou_return_relevant_sources() {
         for destination in [
-            dali(),
-            super::super::CATALOG
+            super::super::plans::for_days(dali(), 7).unwrap(),
+            super::super::plans::for_days(super::super::CATALOG
                 .iter()
                 .find(|d| d.name == "杭州")
                 .unwrap()
-                .clone(),
+                .clone(), 3).unwrap(),
         ] {
             let start = std::time::Instant::now();
             let outcome = search(&destination).await;

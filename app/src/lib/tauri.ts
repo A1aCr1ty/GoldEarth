@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 export const tauri = {
   ping(): Promise<string> { return invoke<string>("ping"); },
-  dailyTravel(date: string, force = false) { return invoke<import("@/types").DailyTravel>("daily_travel", { date, force }); },
+  dailyTravel(date: string, force = false, days = 3) { return invoke<import("@/types").DailyTravel>("daily_travel", { date, force, days }); },
   listCategories() { return invoke<import("@/types").Category[]>("list_categories"); },
   listCategoryHtmlFiles() { return invoke<import("@/types").CategoryHtmlFile[]>("list_category_html_files"); },
   readCategoryHtmlFile(categoryId: string | null, name: string) { return invoke<string>("read_category_html_file", { categoryId, name }); },

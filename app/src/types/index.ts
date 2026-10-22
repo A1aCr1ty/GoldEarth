@@ -2,9 +2,11 @@ export type CategoryId = string;
 export interface CategoryHtmlFile { categoryId: CategoryId | null; name: string; size: number; updatedAt: string }
 export interface TravelDestination {
   id: string; name: string; region: string; theme: string; intro: string; season: string;
-  days: number; route: { title: string; stops: string[] }[];
+  days: number; route: { title: string; stops: string[]; note?: string }[];
   transport: string; stay: string; food: string[]; budget: string; tips: string[];
   referenceTitle: string; referenceUrl: string;
+  budgetItems?: { label: string; amount: string }[];
+  lodgingAreas?: string[]; reservations?: string[]; rainyDay?: string[]; planningNote?: string;
 }
 export interface DailyTravel {
   schemaVersion: number; date: string; destination: TravelDestination;

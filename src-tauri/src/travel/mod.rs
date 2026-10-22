@@ -1,5 +1,6 @@
 //! 每日国内旅行灵感：日期轮换路线参考，联网聚合相关攻略，保存当天检索结果。
 mod search;
+mod plans;
 use chrono::{Datelike, NaiveDate, Utc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,14 @@ use std::{fs, path::Path};
 pub struct RouteDay {
     pub title: String,
     pub stops: Vec<String>,
+    #[serde(default)]
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetItem {
+    pub label: String,
+    pub amount: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +38,16 @@ pub struct Destination {
     pub tips: Vec<String>,
     pub reference_title: String,
     pub reference_url: String,
+    #[serde(default)]
+    pub budget_items: Vec<BudgetItem>,
+    #[serde(default)]
+    pub lodging_areas: Vec<String>,
+    #[serde(default)]
+    pub reservations: Vec<String>,
+    #[serde(default)]
+    pub rainy_day: Vec<String>,
+    #[serde(default)]
+    pub planning_note: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +86,7 @@ fn read_cache(path: &Path, date: &str, destination: &Destination) -> Option<Dail
     if saved.schema_version != 1
         || saved.date != date
         || saved.destination.id != destination.id
+        || saved.destination.days != destination.days
         || saved.sources.is_empty()
         || saved.researched_at.is_none()
         || saved.sources.iter().any(|source| !safe_url(&source.url))
@@ -80,14 +100,14 @@ fn read_cache(path: &Path, date: &str, destination: &Destination) -> Option<Dail
     Some(saved)
 }
 
-pub async fn daily(path: &Path, date: &str, force: bool) -> Result<DailyTravel, String> {
+pub async fn daily(path: &Path, date: &str, force: bool, days: usize) -> Result<DailyTravel, String> {
     let day =
         NaiveDate::parse_from_str(date, "%Y-%m-%d").map_err(|_| "推荐日期格式应为 YYYY-MM-DD")?;
     if !(2000..=2200).contains(&day.year()) {
         return Err("推荐日期超出支持范围".into());
     }
+    let destination = plans::for_days(destination_for(day), days)?;
     let _guard = LOAD_LOCK.lock().await;
-    let destination = destination_for(day);
     let cached = read_cache(path, date, &destination);
     if !force {
         if let Some(saved) = cached.as_ref() {
@@ -295,6 +315,8 @@ mod tests {
             "cached"
         );
         assert!(read_cache(&path, "2026-10-17", &destination).is_none());
+        let longer = plans::for_days(destination.clone(), 7).unwrap();
+        assert!(read_cache(&path, "2026-10-16", &longer).is_none());
         // 旧版本缓存没有 diagnostics，升级后仍应可以继续读取。
         let mut legacy = serde_json::to_value(&report).unwrap();
         legacy.as_object_mut().unwrap().remove("diagnostics");
