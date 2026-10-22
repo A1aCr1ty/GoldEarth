@@ -13,6 +13,7 @@ import ArchifyPage from "@/pages/ArchifyPage";
 import FileSearchPage from "@/pages/FileSearchPage";
 import HousingPage from "@/pages/HousingPage";
 import TrackerPage from "@/pages/TrackerPage";
+import NbaPage from "@/pages/NbaPage";
 export default function App() {
   return (
     <HashRouter>
@@ -20,6 +21,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/nba" element={<NbaPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/library" element={<LibraryPage />} />

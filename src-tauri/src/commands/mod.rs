@@ -7,6 +7,7 @@ pub mod housing;
 pub mod library;
 pub mod market;
 pub mod notes;
+pub mod nba;
 pub mod prices;
 pub mod reader;
 pub mod trackers;

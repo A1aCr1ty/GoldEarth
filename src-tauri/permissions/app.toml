@@ -5,13 +5,14 @@
 # 所以每个命令都必须在这里显式声明 —— 少写一个，界面上就是
 # 「xxx not allowed. Command not found」。
 #
-# 名单由 src/lib.rs 的 generate_handler! 生成，别手改；
-# 加了新命令记得两边都补。
+# 加了新命令记得与 build.rs 两边都补；构建时对照命令注册表检查漏项。
 
 [[permission]]
 identifier = "allow-app-commands"
 description = "App 自己的全部命令，供主窗口使用。"
 commands.allow = [
+  "nba_scoreboard",
+  "nba_summary",
   "tracker_bootstrap",
   "tracker_report",
   "tracker_mutate",

@@ -18,13 +18,28 @@
 // capabilities/xianyu.json 和 allow-xianyu-report 都撤掉了——
 // 远程页面现在一条应用命令都碰不到。
 //
-// 名单由 `src/lib.rs` 的 generate_handler! 生成，**别手改**：
-// 加了新命令记得 build.rs 和 permissions/app.toml 两边都补。
+// 加了新命令记得 build.rs 和 permissions/app.toml 两边都补；
+// 构建前会对照 src/lib.rs 的 generate_handler! 检查，漏项直接失败。
 //
 fn main() {
+    // Fail before packaging if a registered command is missing from either ACL list.
+    println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=permissions/app.toml");
+    let source = std::fs::read_to_string("src/lib.rs").expect("读取命令注册表失败");
+    let permissions = std::fs::read_to_string("permissions/app.toml").expect("读取权限清单失败");
+    let registered = source.split("generate_handler![").nth(1)
+        .and_then(|s| s.split("])").next()).expect("找不到命令注册表");
+    for entry in registered.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        let name = entry.rsplit("::").next().unwrap();
+        let quoted = format!("\"{name}\"");
+        assert!(include_str!("build.rs").contains(&quoted), "命令 {name} 缺少构建清单声明");
+        assert!(permissions.contains(&quoted), "命令 {name} 缺少主窗口权限声明");
+    }
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "nba_scoreboard",
+            "nba_summary",
             "tracker_bootstrap",
             "tracker_report",
             "tracker_mutate",
