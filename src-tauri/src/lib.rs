@@ -41,8 +41,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::robotics::robot_feed,
+            commands::robotics::robot_collection,
+            commands::robotics::robot_sources,
             commands::nba::nba_scoreboard,
             commands::nba::nba_summary,
+            commands::nba_feed::nba_feed,
             commands::trackers::tracker_bootstrap,
             commands::trackers::tracker_report,
             commands::trackers::tracker_mutate,

@@ -3,6 +3,7 @@ import { Activity, CalendarDays, ChevronLeft, ChevronRight, CircleDot, RefreshCw
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { beijingDate, loadScoreboard, loadSummary, nbaSnapshot, pollNba, NbaCompetitor, NbaEvent, NbaSummary, NbaTeam, shiftDate, statusText, teamName } from "@/lib/nba";
+import { NbaFeed } from "@/components/nba/NbaFeed";
 
 const time = (date: string | number) => new Date(date).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", ...(typeof date === "number" ? { second: "2-digit" } : {}) });
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -32,7 +33,7 @@ function BoxScore({ data, game }: { data: NbaSummary; game: NbaEvent }) {
 }
 function Empty({ text }: { text: string }) { return <div className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground"><CircleDot className="h-8 w-8 opacity-40" />{text}</div>; }
 
-export default function NbaPage() {
+function NbaScoreboard() {
   const [date, setDate] = useState(beijingDate);
   const [games, setGames] = useState<NbaEvent[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -100,4 +101,9 @@ export default function NbaPage() {
       </div><footer className="pb-2 text-xs leading-5 text-muted-foreground">数据来源 ESPN · 所有赛程日期和开赛时间均为北京时间 · 比分与统计以数据源更新为准{auto ? " · 页面在后台时暂停请求" : " · 自动刷新已暂停"}</footer>
     </div></div>
   </div>;
+}
+
+export default function NbaPage() {
+  const [tab, setTab] = useState("scores");
+  return <div className="flex h-full min-w-0 flex-col overflow-hidden"><nav className="flex shrink-0 gap-2 border-b px-5 py-2" aria-label="NBA 页面"><Button size="sm" variant={tab === "scores" ? "secondary" : "ghost"} aria-pressed={tab === "scores"} onClick={() => setTab("scores")}>赛程与数据</Button><Button size="sm" variant={tab === "feed" ? "secondary" : "ghost"} aria-pressed={tab === "feed"} onClick={() => setTab("feed")}>新闻与虎扑</Button></nav><div className="min-h-0 flex-1">{tab === "scores" ? <NbaScoreboard /> : <NbaFeed />}</div></div>;
 }

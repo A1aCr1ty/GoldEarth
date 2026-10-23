@@ -38,8 +38,12 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "robot_feed",
+            "robot_collection",
+            "robot_sources",
             "nba_scoreboard",
             "nba_summary",
+            "nba_feed",
             "tracker_bootstrap",
             "tracker_report",
             "tracker_mutate",

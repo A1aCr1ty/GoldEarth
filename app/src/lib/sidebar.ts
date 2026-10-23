@@ -44,7 +44,8 @@ export const NAV_TREE: SidebarGroup[] = [
     children: [
       { to: "/home", label: "天气", icon: "dashboard", hint: "天气、日历与每日推荐" },
       { to: "/explore", label: "冲浪", icon: "compass", hint: "热门社区与热榜" },
-      { to: "/nba", label: "NBA", icon: "basketball", hint: "每日赛程、实时比分与技术统计" },
+      { to: "/nba", label: "NBA", icon: "basketball", hint: "赛程、技术统计、新闻与关注球队的虎扑专区" },
+      { to: "/robotics", label: "机器人推送", icon: "bot", hint: "整机、零部件、算法与系统更新，收藏整理资料" },
     ],
   },
   {
