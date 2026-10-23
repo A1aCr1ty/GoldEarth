@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { errText } from "@/lib/errors";
 import { tauri } from "@/lib/tauri";
 import { SourceManager } from "@/components/robotics/SourceManager";
-import { DOCUMENT_KINDS, documentLabel, robotHeading, ROBOT_CATEGORIES, categoryLabel, feedItems, filterRobotItems, loadRobotFeed, robotCollection, robotMarkdown, RobotCollection, RobotItem, RobotReport } from "@/lib/robotics";
+import { DOCUMENT_KINDS, robotDocumentUrl, documentLabel, robotHeading, ROBOT_CATEGORIES, categoryLabel, feedItems, filterRobotItems, loadRobotFeed, robotCollection, robotMarkdown, RobotCollection, RobotItem, RobotReport } from "@/lib/robotics";
 
 const PREF_KEY = "goldearth.robotics.preferences";
 function preferences(): { subscribed: string[]; auto: boolean } {
@@ -69,7 +69,7 @@ export default function RoboticsPage() {
     finally { mutating.current = false; if (mounted.current) setBusy(false); }
   }
   async function open(item: RobotItem) {
-    try { await tauri.openReader(item.url, robotHeading(item).title); await mutate("read", item); }
+    try { await tauri.openReader(robotDocumentUrl(item.url), robotHeading(item).title); await mutate("read", item); }
     catch (e) { setError(`原文打开失败：${errText(e)}`); }
   }
   async function toNote(items: RobotItem[]) {

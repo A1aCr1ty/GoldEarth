@@ -52,7 +52,7 @@ pub(super) fn defaults() -> Vec<Source> {
             "agibot-x2-docs",
             "智元灵犀 X2 · 开发文档",
             "humanoid",
-            "https://x2-aimdk.agibot.com/",
+            "https://x2-aimdk.agibot.com/en/latest/index.html",
         ),
         (
             "limx-docs",
@@ -202,6 +202,10 @@ pub(super) fn document_kind(text: &str) -> Option<&'static str> {
 }
 
 pub(super) async fn text(url: &str) -> Result<String, String> {
+    text_with_url(url).await.map(|(body, _)| body)
+}
+
+async fn text_with_url(url: &str) -> Result<(String, String), String> {
     let response = CLIENT
         .get(url)
         .header(
@@ -219,6 +223,7 @@ pub(super) async fn text(url: &str) -> Result<String, String> {
             format!("来源请求失败（HTTP {status}）")
         });
     }
+    let final_url = response.url().to_string();
     let mut response = response;
     let mut body = Vec::new();
     while let Some(chunk) = response.chunk().await.map_err(|e| e.to_string())? {
@@ -227,7 +232,7 @@ pub(super) async fn text(url: &str) -> Result<String, String> {
         }
         body.extend_from_slice(&chunk);
     }
-    Ok(String::from_utf8_lossy(&body).into_owned())
+    Ok((String::from_utf8_lossy(&body).into_owned(), final_url))
 }
 
 pub(super) fn website(raw: &str, source: &Source) -> Result<Vec<Item>, String> {
@@ -465,7 +470,14 @@ pub(super) async fn website_fetch(source: &Source) -> Result<Vec<Item>, String> 
         }
         return Err("该 PDF 地址未返回 PDF 文件，可能需要登录或已失效".into());
     }
-    website(&text(&source.url).await?, source)
+    let (body, final_url) = text_with_url(&source.url).await?;
+    website_at(&body, source, &final_url)
+}
+
+fn website_at(raw: &str, source: &Source, final_url: &str) -> Result<Vec<Item>, String> {
+    let mut resolved = source.clone();
+    resolved.url = final_url.to_string();
+    website(raw, &resolved)
 }
 
 pub(super) fn github_documents(data: &Value, source: &Source, branch: &str) -> Vec<Item> {
@@ -643,6 +655,28 @@ pub(super) async fn github(source: &Source) -> Result<Vec<Item>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn redirected_document_links_use_the_response_directory() {
+        let source = Source {
+            id: "test".into(),
+            name: "X2".into(),
+            category: "humanoid".into(),
+            url: "https://x2-aimdk.agibot.com/".into(),
+            kind: "website".into(),
+        };
+        let items = website_at(
+            r#"<title>SDK</title><a href="Interface/index.html">API interface</a>"#,
+            &source,
+            "https://x2-aimdk.agibot.com/en/latest/index.html",
+        )
+        .unwrap();
+        assert!(items
+            .iter()
+            .any(|i| i.url == "https://x2-aimdk.agibot.com/en/latest/Interface/index.html"));
+        assert!(!items
+            .iter()
+            .any(|i| i.url == "https://x2-aimdk.agibot.com/Interface/index.html"));
+    }
     #[test]
     fn domestic_factory_defaults_cover_all_eight_topics() {
         let defaults = defaults();

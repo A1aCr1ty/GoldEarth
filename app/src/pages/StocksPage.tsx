@@ -8,6 +8,7 @@ import { FundFlowPanel, IndicatorPanel, OrderBook, StatusBar, StockHeader } from
 import { KlineChart, type SubIndicator } from "@/components/stock/KlineChart";
 import { TimeChart } from "@/components/stock/TimeChart";
 import { StockAgentPanel } from "@/components/stock/StockAgentPanel";
+import { StockQuantPanel } from "@/components/stock/StockQuantPanel";
 import { IndexPicker } from "@/components/stock/IndexPicker";
 import { StockSearch } from "@/components/stock/StockSearch";
 import type { KlinePeriod, RankKind } from "@/types";
@@ -35,7 +36,7 @@ const RANKS: { value: RankKind; label: string }[] = [
 export default function StocksPage() {
   const s = useStocks();
   const [rankKind, setRankKind] = useState<RankKind>("gainers");
-  const [rightTab, setRightTab] = useState<"market" | "agent">("market");
+  const [rightTab, setRightTab] = useState<"market" | "agent" | "quant">("market");
 
   useEffect(() => {
     void s.refreshAll();
@@ -172,15 +173,18 @@ export default function StocksPage() {
 
         {/* 右栏：行情面板 / Agent 分析 两个 tab 切换 */}
         <aside className="flex w-[clamp(11rem,28%,20rem)] shrink-0 flex-col border-l">
-          <div className="flex h-8 shrink-0 items-center gap-1 border-b bg-muted/40 px-1.5">
+          <div className="flex h-8 shrink-0 items-center gap-1 overflow-x-auto whitespace-nowrap border-b bg-muted/40 px-1.5">
             <TabButton active={rightTab === "market"} onClick={() => setRightTab("market")}>
               盘口 · 指标
             </TabButton>
             <TabButton active={rightTab === "agent"} onClick={() => setRightTab("agent")}>
               Agent 分析
             </TabButton>
+            <TabButton active={rightTab === "quant"} onClick={() => setRightTab("quant")}>
+              量化评价
+            </TabButton>
           </div>
-          {rightTab === "agent" ? (
+          {rightTab === "quant" ? <StockQuantPanel /> : rightTab === "agent" ? (
             <div className="min-h-0 flex-1">
               <StockAgentPanel />
             </div>

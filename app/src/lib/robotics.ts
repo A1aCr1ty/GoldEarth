@@ -35,6 +35,18 @@ export interface RobotReport { sources: RobotSource[]; warning: string | null }
 export interface RobotCollection { saved: Record<string, RobotItem>; read: string[] }
 export const categoryLabel = (id: string) => ROBOT_CATEGORIES.find(c => c.id === id)?.label || id;
 export const loadRobotFeed = (force = false) => invoke<RobotReport>("robot_feed", { force });
+/** Repair old X2 relative-link caches without changing saved/read identities. */
+export function robotDocumentUrl(raw: string): string {
+  try {
+    const url = new URL(raw);
+    if (url.protocol === "https:" && url.hostname === "x2-aimdk.agibot.com" &&
+      !/^\/(?:en|zh|zh_CN|zh-cn)\//i.test(url.pathname) && /\.html$/i.test(url.pathname)) {
+      url.pathname = `/en/latest${url.pathname}`;
+      return url.href;
+    }
+  } catch { /* Preserve unknown URLs. */ }
+  return raw;
+}
 export const robotCollection = (action = "list", item?: RobotItem, url?: string) =>
   invoke<RobotCollection>("robot_collection", { action, item: item ?? null, url: url ?? null });
 
@@ -164,6 +176,6 @@ export function filterRobotItems(items: RobotItem[], options: {
 const markdownText = (text: string) => text.replace(/[\\`*_{}\[\]<>#]/g, "\\$&");
 export function robotMarkdown(items: RobotItem[]): string {
   return `# 机器人资料摘录\n\n整理时间：${new Date().toLocaleString("zh-CN")}\n\n以下为来源提供的标题与摘要，完整内容见原文。\n\n` + items.map(normalizeRobotItem).map(item =>
-    `## ${markdownText(robotHeading(item).title)}\n\n- 原始标题：${markdownText(item.title)}\n- 分类：${categoryLabel(item.category)}\n- 资料类型：${documentLabel(item.kind)}\n- 来源：${markdownText(item.source)}\n- 发布时间：${item.publishedAt || "来源未提供"}\n- 原文：<${item.url.replace(/[<>\r\n]/g, "")}>\n\n${markdownText(item.summary || "来源未提供摘要")}\n`
+    `## ${markdownText(robotHeading(item).title)}\n\n- 原始标题：${markdownText(item.title)}\n- 分类：${categoryLabel(item.category)}\n- 资料类型：${documentLabel(item.kind)}\n- 来源：${markdownText(item.source)}\n- 发布时间：${item.publishedAt || "来源未提供"}\n- 原文：<${robotDocumentUrl(item.url).replace(/[<>\r\n]/g, "")}>\n\n${markdownText(item.summary || "来源未提供摘要")}\n`
   ).join("\n---\n\n");
 }

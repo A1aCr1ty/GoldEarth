@@ -8,6 +8,14 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/li
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText, { module: m, exports: m.exports, URL, require: () => ({ invoke() {} }) });
 const R = m.exports;
+test('old X2 links open at the resolved docs directory without mutating bookmark identities', () => {
+  const old='https://x2-aimdk.agibot.com/Interface/index.html#control';
+  assert.equal(R.robotDocumentUrl(old),'https://x2-aimdk.agibot.com/en/latest/Interface/index.html#control');
+  const good='https://x2-aimdk.agibot.com/en/latest/Interface/index.html';
+  assert.equal(R.robotDocumentUrl(good),good);
+  assert.equal(R.robotDocumentUrl('https://example.com/Interface/index.html'),'https://example.com/Interface/index.html');
+  assert.equal(R.robotDocumentUrl('https://x2-aimdk.agibot.com/zh/latest/index.html'),'https://x2-aimdk.agibot.com/zh/latest/index.html');
+});
 const item = (url, category, publishedAt = '2026-10-22T10:00:00Z') => ({ url, category, publishedAt, title: '机器人 ROS', summary: '版本更新', source: 'GitHub', kind: 'release' });
 const opts = (more = {}) => ({ category: 'all', subscribed: ['system', 'algorithm'], query: '', view: 'all', read: [], days: 0, ...more });
 test('cross-topic deduplication preserves category membership before filtering', () => {
