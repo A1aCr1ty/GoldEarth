@@ -11,7 +11,7 @@ import {
 } from "@/lib/sidebar";
 import {
   Bot, BookOpen, Building2, Car, Compass, FileText, FolderTree, Gem, LayoutDashboard,
-  Network, Search, Settings as SettingsIcon, Tags, TrendingUp, CircleDot,
+  Network, Search, Settings as SettingsIcon, Tags, TrendingUp, CircleDot, Music2,
 } from "lucide-react";
 
 const ICONS: Record<SidebarIconName, typeof Compass> = {
@@ -30,6 +30,7 @@ const ICONS: Record<SidebarIconName, typeof Compass> = {
   bot: Bot,
   settings: SettingsIcon,
   basketball: CircleDot,
+  music: Music2,
 };
 
 /** 图标栏里的悬浮提示：折叠后没有文字，hover 才能知道是哪一页 */

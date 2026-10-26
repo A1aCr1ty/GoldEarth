@@ -12,7 +12,7 @@
 export type SidebarIconName =
   | "dashboard" | "compass" | "tags" | "building" | "car" | "gem"
   | "trending" | "book" | "search" | "note" | "folder" | "network"
-  | "bot" | "settings" | "basketball";
+  | "bot" | "settings" | "basketball" | "music";
 
 export interface SidebarLeaf {
   /** 叶子节点：可导航页面，to 唯一 */
@@ -44,6 +44,7 @@ export const NAV_TREE: SidebarGroup[] = [
     children: [
       { to: "/home", label: "天气", icon: "dashboard", hint: "天气、日历与每日推荐" },
       { to: "/explore", label: "冲浪", icon: "compass", hint: "热门社区与热榜" },
+      { to: "/music", label: "音乐", icon: "music", hint: "本地音乐、收藏与音乐播放" },
       { to: "/nba", label: "NBA", icon: "basketball", hint: "赛程、技术统计、新闻与关注球队的虎扑专区" },
       { to: "/robotics", label: "机器人推送", icon: "bot", hint: "整机、零部件、算法与系统更新，收藏整理资料" },
     ],

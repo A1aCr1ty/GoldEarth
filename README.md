@@ -836,6 +836,14 @@ cargo test --lib trending_smoke -- --ignored --nocapture
 
 验证：在 `app` 执行 `node --test tests/nba.test.cjs`；根目录执行 `node src-tauri/scripts/check_app_permissions.mjs` 和 `cargo test --manifest-path src-tauri/Cargo.toml --lib commands::nba --offline`。真实 ESPN 联网验证单独执行 `cargo test --manifest-path src-tauri/Cargo.toml --lib commands::nba::tests::live_scoreboard_and_summary --offline -- --ignored --nocapture`（`--offline` 仅禁用 Cargo 拉依赖，测试仍需联网）。
 
+### 本地音乐
+
+从「每日 → 音乐」打开音乐空间。采用曲库列表、唱片展示及全局底部播放栏布局，可批量选择或拖入音频，搜索歌曲/歌手、收藏、查看播放队列、切换上一首/下一首、拖动进度、调节音量，并选择列表循环、单曲循环或随机播放。切换到其他页面后仍会继续播放。
+
+音频文件和收藏保存到本机 WebView 的 IndexedDB，重新打开后恢复曲库，不自动播放；从曲库移除不会删除原文件。歌曲与歌手根据「歌手 - 歌名.扩展名」解析，未匹配的歌手显示为未知歌手，时长在首次加载播放时读取。目前不接入在线曲库或账号。音频通过 HTMLAudioElement 调用系统 WebView 解码，支持情况取决于系统的编码能力；不能解码的文件会显示错误，可尝试转换为 MP3/WAV。Tauri 主窗口关闭原生拖放拦截，以便网页接收音频文件拖放，此配置需要重启桌面开发进程。
+
+验证：在 `app` 执行 `node --test tests/music.test.cjs tests/sidebar.test.cjs` 及 `npm run build`。浏览器实测使用生成的 WAV，验证导入、解码播放、暂停、进度调整、单曲循环、跨页播放、搜索、播放队列及刷新恢复收藏。
+
 ### 侧边栏目录与缩放
 
 侧栏从平铺列表改成按内容分类的多级目录：每日 / 市场（价格与销量、金融）/ 资料 / 创作 / 系统。目录可逐级折叠，当前路由所在的所有祖先目录会自动展开，直接访问深层链接也不会落进一个空目录里。折叠态下目录会摊平为图标栏，悬停显示页面说明。

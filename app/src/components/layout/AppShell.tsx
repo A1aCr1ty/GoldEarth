@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
+import { MusicPlayer } from "@/components/music/MusicPlayer";
 export function AppShell() {
   // 整个界面跟着窗口大小缩放
   useUiScale();
@@ -29,9 +30,12 @@ export function AppShell() {
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* 侧栏跟着窗口缩，宽度还能拖动、折叠成图标栏，见 Sidebar */}
       <Sidebar />
-      <main className="flex-1 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="min-h-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
+      <MusicPlayer />
+      </div>
     </div>
   );
 }
