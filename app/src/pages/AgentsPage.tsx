@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, Play, Bot, Pencil } from "lucide-react";
 import { useAgents } from "@/store/agents";
 import type { Agent, AgentKind } from "@/types";
+import { readAgentModel, withoutAgentModel, withAgentModel } from "@/lib/agentModel";
 /** Codex 的 prompt 是位置参数，不能写成 --prompt；非 git 目录要加 --skip-git-repo-check */
 const CODEX_DEFAULT_ARGS = "exec --skip-git-repo-check";
 export default function AgentsPage() {
@@ -20,26 +21,27 @@ export default function AgentsPage() {
   const [kind, setKind] = useState<AgentKind>("codex");
   const [command, setCommand] = useState("codex");
   const [args, setArgs] = useState(CODEX_DEFAULT_ARGS);
+  const [model, setModel] = useState("");
   const [description, setDescription] = useState("");
   const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [sessions, setSessions] = useState<Record<string, string | undefined>>({});
   useEffect(() => { refresh(); refreshRuns(); }, [refresh, refreshRuns]);
   function resetForm() {
     setName(""); setDescription(""); setCommand("codex");
-    setArgs(CODEX_DEFAULT_ARGS); setKind("codex"); setEditing(null);
+    setArgs(CODEX_DEFAULT_ARGS); setModel(""); setKind("codex"); setEditing(null);
   }
   function openCreate() { resetForm(); setOpen(true); }
   function openEdit(a: Agent) {
     setEditing(a);
     setName(a.name); setKind(a.kind); setCommand(a.command);
-    setArgs(a.args.join(" ")); setDescription(a.description ?? "");
+    setArgs((a.kind === "codex" ? withoutAgentModel(a.args) : a.args).join(" ")); setModel(a.kind === "codex" ? readAgentModel(a.args) : ""); setDescription(a.description ?? "");
     setOpen(true);
   }
   async function handleSave() {
     if (!name.trim() || !command.trim()) return;
     const payload = {
       name: name.trim(), kind, command: command.trim(),
-      args: args.split(/\s+/).filter(Boolean),
+      args: kind === "codex" ? withAgentModel(args.split(/\s+/).filter(Boolean), model) : args.split(/\s+/).filter(Boolean),
       description: description.trim() || undefined, enabled: true,
     };
     if (editing) await update(editing.id, payload);
@@ -98,6 +100,7 @@ export default function AgentsPage() {
                 </SelectContent>
               </Select>
               <Input placeholder="可执行命令" value={command} onChange={(e) => setCommand(e.target.value)} />
+              {kind === "codex" && <div className="space-y-1.5"><Input aria-label="Codex 模型" placeholder="模型（选填，例如 gpt-6-luna）" value={model} onChange={(e) => setModel(e.target.value)} /><p className="text-xs text-muted-foreground">留空继承 Codex CLI 配置。填写后仅覆盖这个 Agent 的模型；实际可用性取决于登录账号和 CLI 版本。</p></div>}
               <div className="space-y-1.5">
                 <Input placeholder="参数（空格分隔，使用 {prompt} 作为占位符）" value={args} onChange={(e) => setArgs(e.target.value)} />
                 <p className="text-xs text-muted-foreground">

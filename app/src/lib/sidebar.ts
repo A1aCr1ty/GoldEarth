@@ -12,7 +12,7 @@
 export type SidebarIconName =
   | "dashboard" | "compass" | "tags" | "building" | "car" | "gem"
   | "trending" | "book" | "search" | "note" | "folder" | "network"
-  | "bot" | "settings" | "basketball" | "music";
+  | "bot" | "settings" | "basketball" | "music" | "account";
 
 export interface SidebarLeaf {
   /** 叶子节点：可导航页面，to 唯一 */
@@ -67,7 +67,10 @@ export const NAV_TREE: SidebarGroup[] = [
       {
         id: "market-finance",
         label: "金融",
-        children: [{ to: "/stocks", label: "股票", icon: "trending", hint: "指数、个股与 Agent 分析" }],
+        children: [
+          { to: "/stocks", label: "股票", icon: "trending", hint: "指数、个股与 Agent 分析" },
+          { to: "/stock-accounts", label: "股票账户", icon: "account", hint: "按账户查看持仓与盈亏" },
+        ],
       },
     ],
   },

@@ -130,6 +130,11 @@ pub struct AgentRun {
     /// 这轮对话是为哪只股票发起的；股票看板按「每只股票一个独立会话」用它分区
     #[serde(default, alias = "stock_code", skip_serializing_if = "Option::is_none")]
     pub stock_code: Option<String>,
+    /// 股票账户复盘按账户隔离，与单只股票分析分开。
+    #[serde(default, alias = "stock_account_id", skip_serializing_if = "Option::is_none")]
+    pub stock_account_id: Option<String>,
+    #[serde(default, alias = "stock_plan_id", skip_serializing_if = "Option::is_none")]
+    pub stock_plan_id: Option<String>,
     /// 这轮对话是为哪个知识库分类发起的；知识库按「每个分类一个独立会话」用它分区
     #[serde(default, alias = "library_id", skip_serializing_if = "Option::is_none")]
     pub library_id: Option<String>,
@@ -462,6 +467,8 @@ mod tests {
             session_id: None,
             note_id: None,
             stock_code: None,
+            stock_account_id: None,
+            stock_plan_id: None,
             library_id: None,
         };
         let v = serde_json::to_value(&run).unwrap();
@@ -483,6 +490,13 @@ mod tests {
         };
         let sv = serde_json::to_value(&scoped).unwrap();
         assert_eq!(sv["libraryId"], "c1");
+        let account_run = AgentRun {
+            stock_account_id: Some("account-1".into()),
+            ..run
+        };
+        let account_value = serde_json::to_value(&account_run).unwrap();
+        assert_eq!(account_value["stockAccountId"], "account-1");
+        assert!(account_value.get("stock_account_id").is_none());
     }
 
     #[test]
@@ -496,6 +510,7 @@ mod tests {
         assert_eq!(run.agent_id, "a1");
         assert_eq!(run.started_at, "2026-01-01T00:00:00Z");
         assert_eq!(run.finished_at.as_deref(), Some("2026-01-01T00:00:01Z"));
+        assert!(run.stock_account_id.is_none());
     }
 
     #[test]

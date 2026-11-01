@@ -24,7 +24,9 @@ interface AgentsState {
     noteId?: string,
     context?: string,
     stockCode?: string,
-    libraryId?: string
+    libraryId?: string,
+    stockAccountId?: string,
+    stockPlanId?: string
   ) => Promise<AgentRun>;
   cancel: (runId: string) => Promise<void>;
 }
@@ -141,8 +143,8 @@ export const useAgents = create<AgentsState>((set) => {
     await tauri.deleteAgent(id);
     set((s) => ({ agents: s.agents.filter((a) => a.id !== id) }));
   },
-  async run(agentId, prompt, sessionId, noteId, context, stockCode, libraryId) {
-    const r = await tauri.runAgent(agentId, prompt, sessionId, noteId, context, stockCode, libraryId);
+  async run(agentId, prompt, sessionId, noteId, context, stockCode, libraryId, stockAccountId, stockPlanId) {
+    const r = await tauri.runAgent(agentId, prompt, sessionId, noteId, context, stockCode, libraryId, stockAccountId, stockPlanId);
     set((s) => ({ runs: [r, ...s.runs].slice(0, 100) }));
     return r;
   },

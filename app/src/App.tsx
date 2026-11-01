@@ -5,6 +5,7 @@ import NotesPage from "@/pages/NotesPage";
 import AgentsPage from "@/pages/AgentsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import StocksPage from "@/pages/StocksPage";
+import StockAccountsPage from "@/pages/StockAccountsPage";
 import HomePage from "@/pages/HomePage";
 import LibraryPage from "@/pages/LibraryPage";
 import ExplorePage from "@/pages/ExplorePage";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/notes" element={<NotesPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/stocks" element={<StocksPage />} />
+          <Route path="/stock-accounts" element={<StockAccountsPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/prices" element={<PricePage />} />
           <Route path="/agents" element={<AgentsPage />} />

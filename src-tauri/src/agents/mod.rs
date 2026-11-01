@@ -6,7 +6,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::oneshot;
 
@@ -62,6 +62,15 @@ fn resolve_program(program: &str, bin_path: Option<&str>) -> PathBuf {
     if program.contains('\\') || program.contains('/') || direct.is_file() {
         return direct;
     }
+    // 桌面版与 npm CLI 共用 config.toml。优先使用桌面版随更新安装的 CLI，
+    // 避免 PATH 中的旧 npm CLI 无法使用桌面版已选的新模型。
+    if program.eq_ignore_ascii_case("codex") {
+        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+            if let Some(bundled) = desktop_codex_at(&PathBuf::from(local).join("OpenAI/Codex/bin")) {
+                return bundled;
+            }
+        }
+    }
     let path = std::env::var_os("PATH").unwrap_or_default();
     for dir in std::env::split_paths(&path) {
         if dir.as_os_str().is_empty() {
@@ -83,6 +92,17 @@ fn resolve_program(program: &str, bin_path: Option<&str>) -> PathBuf {
         }
     }
     direct
+}
+
+#[cfg(windows)]
+fn desktop_codex_at(root: &std::path::Path) -> Option<PathBuf> {
+    let mut candidates: Vec<_> = std::fs::read_dir(root).ok()?.filter_map(Result::ok)
+        .map(|entry| entry.path().join("codex.exe"))
+        .filter(|path| path.is_file())
+        .map(|path| (path.metadata().and_then(|m| m.modified()).ok(), path))
+        .collect();
+    candidates.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)));
+    candidates.into_iter().next().map(|(_, path)| path)
 }
 
 #[cfg(not(windows))]
@@ -118,6 +138,43 @@ mod tests {
         // 写了路径分隔符就不再搜 PATH，原样交给 spawn
         let explicit = PathBuf::from("tools\\bin\\mycli.exe");
         assert_eq!(resolve_program(r"tools\bin\mycli.exe", None), explicit);
+    }
+
+    #[test]
+    fn desktop_cli_discovery_ignores_incomplete_installations_and_respects_explicit_paths() {
+        let root = std::env::temp_dir().join(format!("goldearth-cli-test-{}", uuid::Uuid::new_v4()));
+        let bundled = root.join("installed-version").join("codex.exe");
+        std::fs::create_dir_all(bundled.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(root.join("incomplete-version")).unwrap();
+        std::fs::write(&bundled, b"fixture only; never executed").unwrap();
+        assert_eq!(super::desktop_codex_at(&root), Some(bundled.clone()));
+        assert_eq!(resolve_program("codex", Some(bundled.to_str().unwrap())), bundled);
+        std::fs::remove_file(&bundled).unwrap();
+        std::fs::remove_dir(root.join("installed-version")).unwrap();
+        std::fs::remove_dir(root.join("incomplete-version")).unwrap();
+        std::fs::remove_dir(&root).unwrap();
+    }
+
+    #[test]
+    fn default_codex_resolution_prefers_the_installed_desktop_cli() {
+        if let Some(local) = std::env::var_os("LOCALAPPDATA") {
+            if let Some(bundled) = super::desktop_codex_at(&PathBuf::from(local).join("OpenAI/Codex/bin")) {
+                assert_eq!(resolve_program("codex", None), bundled);
+            }
+        }
+    }
+
+    #[test]
+    fn failed_turn_errors_are_not_hidden_behind_metadata_warnings() {
+        let raw = concat!(
+            "{\"type\":\"item.completed\",\"item\":{\"type\":\"error\",\"message\":\"Model metadata not found\"}}\n",
+            "{\"type\":\"error\",\"message\":\"{\\\"error\\\":{\\\"message\\\":\\\"The 'gpt-6-luna' model is not supported when using Codex with a ChatGPT account.\\\"}}\"}\n",
+            "{\"type\":\"turn.failed\",\"error\":{\"message\":\"The 'gpt-6-luna' model is not supported when using Codex with a ChatGPT account.\"}}"
+        );
+        let parsed = super::parse_codex_output(raw);
+        assert!(parsed.errors.iter().any(|e| e.contains("not supported when using Codex")));
+        assert!(super::render_run_output(raw, "").contains("not supported when using Codex"));
+        assert!(super::parse_codex_line(r#"{"type":"turn.failed","error":{"message":"authentication expired"}}"#).error.unwrap().contains("authentication expired"));
     }
 
     #[test]
@@ -212,6 +269,46 @@ mod tests {
         let raw = std::fs::read_to_string(dir.join("out.json")).expect("未生成 out.json");
         let received: Vec<String> = serde_json::from_str(&raw).unwrap();
         assert_eq!(received, vec!["--prompt".to_string(), tricky.to_string()]);
+    }
+
+    #[tokio::test]
+    async fn account_review_large_prompt_round_trips_through_stdin() {
+        let agent = Agent {
+            id: "stdin-probe".into(), name: "stdin probe".into(),
+            kind: crate::db::models::AgentKind::Custom,
+            command: "node".into(),
+            args: vec!["-e".into(), "let t='';process.stdin.setEncoding('utf8');process.stdin.on('data',c=>t+=c);process.stdin.on('end',()=>process.stdout.write(JSON.stringify({bytes:Buffer.byteLength(t),tail:t.slice(-5)})))".into()],
+            description: None, enabled: true, created_at: String::new(),
+        };
+        let prompt = format!("{}END!!", "持仓流水\n\"A&B\"".repeat(10_000));
+        let mut command = super::build_run_command(&agent, &prompt, None, None, true);
+        let args: Vec<_> = command.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert_eq!(args.last().map(String::as_str), Some("-"));
+        assert!(!args.iter().any(|a| a.contains("持仓流水")));
+        let mut child = command.spawn().expect("Node is required for the frontend and this input probe");
+        let mut stdin = child.stdin.take().expect("stdin must be piped");
+        use tokio::io::AsyncWriteExt;
+        stdin.write_all(prompt.as_bytes()).await.unwrap();
+        stdin.shutdown().await.unwrap();
+        drop(stdin);
+        let output = child.wait_with_output().await.unwrap();
+        assert!(output.status.success());
+        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(value["bytes"], prompt.len());
+        assert_eq!(value["tail"], "END!!");
+    }
+
+    #[test]
+    fn account_review_codex_prompt_placeholder_uses_stdin_marker() {
+        let agent = Agent {
+            id: "account-agent".into(), name: "account agent".into(), kind: crate::db::models::AgentKind::Codex,
+            command: "tools/codex.exe".into(), args: vec!["exec".into(), "--json".into(), "{prompt}".into()],
+            description: None, enabled: true, created_at: String::new(),
+        };
+        let command = super::build_run_command(&agent, "sensitive-account-context", None, None, true);
+        let args: Vec<_> = command.as_std().get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        assert!(args.iter().any(|a| a == "-"));
+        assert!(!args.iter().any(|a| a.contains("sensitive-account-context")));
     }
 
     #[test]
@@ -852,6 +949,19 @@ pub fn build_command(
     cmd
 }
 
+/// 账户复盘包含整段交易流水，Codex exec 通过标准输入接收，避免 Windows 参数长度限制。
+fn build_run_command(
+    agent: &Agent,
+    prompt: &str,
+    bin_path: Option<&str>,
+    work_dir: Option<&std::path::Path>,
+    pipe_prompt: bool,
+) -> Command {
+    let mut command = build_command(agent, if pipe_prompt { "-" } else { prompt }, bin_path, work_dir);
+    if pipe_prompt { command.stdin(Stdio::piped()); }
+    command
+}
+
 /// 从 codex 的 JSONL 事件流里抽出回复正文与会话 ID
 pub struct CodexOutput {
     pub messages: Vec<String>,
@@ -871,6 +981,21 @@ pub struct CodexLine {
     pub plain: bool,
     /// 增量片段而非完整消息，拼最终输出时要跳过，否则会和完整消息重复
     pub partial: bool,
+}
+
+/// 不同版本会把失败放在 error.message、顶层 message 或序列化的 JSON 字符串里。
+fn codex_error_text(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(text) => {
+            if let Ok(nested) = serde_json::from_str::<serde_json::Value>(text) {
+                if let Some(message) = codex_error_text(&nested) { return Some(message); }
+            }
+            (!text.trim().is_empty()).then(|| text.clone())
+        }
+        serde_json::Value::Object(object) => object.get("error").and_then(codex_error_text)
+            .or_else(|| object.get("message").and_then(codex_error_text)),
+        _ => None,
+    }
 }
 
 /// 解析一行 codex JSONL 事件。
@@ -895,6 +1020,9 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
     let kind = v.get("type").and_then(|t| t.as_str()).unwrap_or_default();
     let item = v.get("item");
     match kind {
+        "error" | "turn.failed" => {
+            out.error = codex_error_text(&v);
+        }
         "thread.started" => {
             out.session_id = v
                 .get("thread_id")
@@ -911,10 +1039,7 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
                     out.partial = kind != "item.completed";
                 }
                 Some("error") => {
-                    out.error = item
-                        .and_then(|i| i.get("message"))
-                        .and_then(|m| m.as_str())
-                        .map(str::to_string);
+                    out.error = item.and_then(codex_error_text);
                 }
                 _ => {}
             }
@@ -929,6 +1054,9 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
             out.partial = true;
         }
         _ => {}
+    }
+    if out.error.is_none() && matches!(kind, "turn.completed" | "task_complete") {
+        out.error = v.get("error").and_then(codex_error_text);
     }
     out
 }
@@ -1145,11 +1273,15 @@ pub fn spawn_run<F>(
         Some(ctx) => format!("{ctx}\n\n{}", run_record.prompt),
         None => run_record.prompt.clone(),
     };
-    let mut command = build_command(
+    let pipe_prompt = run_record.stock_account_id.is_some()
+        && working_agent.kind == crate::db::models::AgentKind::Codex
+        && working_agent.args.first().map(String::as_str) == Some("exec");
+    let mut command = build_run_command(
         &working_agent,
         &effective_prompt,
         Some(&bin_path),
         work.as_deref(),
+        pipe_prompt,
     );
 
     tauri::async_runtime::spawn(async move {
@@ -1158,7 +1290,7 @@ pub fn spawn_run<F>(
             Err(e) => {
                 run_record.status = AgentRunStatus::Failed;
                 run_record.error = Some(format!(
-                    "spawn error: {e}（无法启动命令 \"{}\"，请确认已安装并在 PATH 中，或直接填写可执行文件的完整路径）",
+                    "spawn error: {e}（无法启动命令 \"{}\"；请核对可执行文件路径。若是账户复盘的上下文过长，请选择 Codex 类型的 exec Agent。）",
                     agent.command
                 ));
                 run_record.finished_at = Some(crate::db::now_iso());
@@ -1190,6 +1322,7 @@ pub fn spawn_run<F>(
             }
         };
 
+        let stdin = child.stdin.take();
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
         let mut stdout_buf = String::new();
@@ -1210,7 +1343,7 @@ pub fn spawn_run<F>(
         };
         // 增量按时间片合并再发，别让密集事件灌满 IPC 通道
         let mut pump = StreamPump::default();
-        collect_stdout(stdout, &mut stdout_buf, |line| {
+        let output_task = collect_stdout(stdout, &mut stdout_buf, |line| {
             if let Some(err) = &line.error {
                 // 出错信息也当场显示，不用等运行结束才知道失败原因；
                 // 先把攒着的正文发出去，错误提示才不会插到正文中间
@@ -1219,18 +1352,26 @@ pub fn spawn_run<F>(
             } else if let Some(delta) = reply.push(line) {
                 pump.push(delta, &mut emit_delta);
             }
-        })
-        .await;
-        pump.flush(&mut emit_delta);
-        collect_stderr(stderr, &mut stderr_buf).await;
-
-        let result: Option<(std::process::ExitStatus, bool)> = tokio::select! {
-            res = child.wait() => res.ok().map(|s| (s, false)),
-            _ = cancel_rx => {
-                let _ = child.start_kill();
-                child.wait().await.ok().map(|s| (s, true))
+        });
+        let input_task = async move {
+            if let Some(mut input) = stdin {
+                input.write_all(effective_prompt.as_bytes()).await?;
+                input.shutdown().await?;
+            }
+            Ok::<(), std::io::Error>(())
+        };
+        let wait_task = async {
+            tokio::select! {
+                res = child.wait() => res.ok().map(|s| (s, false)),
+                _ = cancel_rx => {
+                    let _ = child.start_kill();
+                    child.wait().await.ok().map(|s| (s, true))
+                }
             }
         };
+        // 同时写入大上下文、读取输出并处理停止请求，避免管道塞满或停止按钮等待输出结束。
+        let (_, _, input_result, result) = tokio::join!(output_task, collect_stderr(stderr, &mut stderr_buf), input_task, wait_task);
+        pump.flush(&mut emit_delta);
 
         match result {
             Some((_s, true)) => {
@@ -1250,9 +1391,19 @@ pub fn spawn_run<F>(
                 run_record.error = Some("process did not report a status".into());
             }
         }
+        if let Err(error) = input_result {
+            if run_record.status != AgentRunStatus::Cancelled {
+                run_record.status = AgentRunStatus::Failed;
+                run_record.error = Some(format!("写入 Agent 上下文失败：{error}"));
+            }
+        }
         run_record.output = render_run_output(&stdout_buf, &stderr_buf);
+        let parsed_output = parse_codex_output(&stdout_buf);
+        if run_record.status == AgentRunStatus::Failed && !parsed_output.errors.is_empty() {
+            run_record.error = Some(parsed_output.errors.join("\n"));
+        }
         // 记下会话 ID，下一轮就能 resume 接着聊
-        if let Some(sid) = parse_codex_output(&stdout_buf).session_id {
+        if let Some(sid) = parsed_output.session_id {
             run_record.session_id = Some(sid);
         }
         run_record.finished_at = Some(crate::db::now_iso());

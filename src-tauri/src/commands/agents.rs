@@ -83,6 +83,8 @@ pub fn run_agent(
     session_id: Option<String>,
     note_id: Option<String>,
     stock_code: Option<String>,
+    stock_account_id: Option<String>,
+    stock_plan_id: Option<String>,
     library_id: Option<String>,
     context: Option<String>,
 ) -> Result<AgentRun, String> {
@@ -105,6 +107,8 @@ pub fn run_agent(
         stock_code: stock_code
             .filter(|s| !s.is_empty())
             .map(|c| crate::market::symbol::normalize(&c)),
+        stock_account_id: stock_account_id.filter(|s| !s.is_empty()),
+        stock_plan_id: stock_plan_id.filter(|s| !s.is_empty()),
         library_id: library_id.filter(|s| !s.is_empty()),
     };
     let stored = state.storage.insert_run(record).map_err(state_err)?;
@@ -203,6 +207,30 @@ pub fn get_stock_agent_session(
 ) -> Result<Option<String>, String> {
     let code = crate::market::symbol::normalize(&stock_code);
     Ok(state.storage.latest_session_for(&agent_id, &code))
+}
+
+#[tauri::command]
+pub fn list_stock_account_runs(
+    state: State<'_, AppState>,
+    account_id: String,
+    agent_id: String,
+    limit: Option<usize>,
+) -> Result<Vec<AgentRun>, String> {
+    Ok(state.storage.list_runs_for_scope(&account_id, &agent_id, limit.unwrap_or(100)))
+}
+
+#[tauri::command]
+pub fn list_stock_plan_runs(state: State<'_, AppState>, plan_id: String, agent_id: String) -> Result<Vec<AgentRun>, String> {
+    Ok(state.storage.list_runs_for_scope(&plan_id, &agent_id, 30))
+}
+
+#[tauri::command]
+pub fn get_stock_account_agent_session(
+    state: State<'_, AppState>,
+    account_id: String,
+    agent_id: String,
+) -> Result<Option<String>, String> {
+    Ok(state.storage.latest_session_for(&agent_id, &account_id))
 }
 
 /// 某个知识库分类与某个 agent 的对话历史（最新在前）

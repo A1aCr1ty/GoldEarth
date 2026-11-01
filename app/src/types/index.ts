@@ -68,6 +68,9 @@ export interface AgentRun {
   noteId?: string;
   /** 这轮对话是为哪只股票发起的；股票看板按「每只股票一个独立会话」用它分区 */
   stockCode?: string;
+  /** 股票账户复盘的归属账户。 */
+  stockAccountId?: string;
+  stockPlanId?: string;
   /** 这轮对话是为哪个知识库分类发起的；知识库按「每个分类一个独立会话」用它分区 */
   libraryId?: string;
 }

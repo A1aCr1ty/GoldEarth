@@ -667,12 +667,13 @@ impl Storage {
         self.cols.runs.lock().iter().take(limit).cloned().collect()
     }
 
-    /// 一轮运行挂在哪个对象上：笔记页按笔记，股票看板按股票，知识库按分类。
-    /// 三者互斥；都没有就是从 Agent 页发起的全局运行。
+    /// 一轮运行按笔记、股票、股票账户或知识库隔离。
     fn run_scope(r: &AgentRun) -> Option<&str> {
+        if let Some(plan_id) = r.stock_plan_id.as_deref().filter(|id| !id.is_empty()) { return Some(plan_id); }
         r.note_id
             .as_deref()
             .or(r.stock_code.as_deref())
+            .or(r.stock_account_id.as_deref())
             .or(r.library_id.as_deref())
             .filter(|s| !s.is_empty())
     }
@@ -684,7 +685,9 @@ impl Storage {
             .runs
             .lock()
             .iter()
-            .find(|r| r.agent_id == agent_id && Self::run_scope(r) == Some(scope))
+            .find(|r| r.agent_id == agent_id && Self::run_scope(r) == Some(scope)
+                && r.status == models::AgentRunStatus::Succeeded
+                && r.session_id.as_deref().is_some_and(|id| !id.is_empty()))
             .and_then(|r| r.session_id.clone())
             .filter(|s| !s.is_empty())
     }
@@ -851,6 +854,42 @@ pub fn apply_settings_patch(base: &AppSettings, patch: AppSettingsPatch) -> AppS
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stock_account_review_scope_is_preserved() {
+        let run: AgentRun = serde_json::from_value(serde_json::json!({
+            "id": "run-1", "agentId": "agent-1", "prompt": "review",
+            "status": "succeeded", "startedAt": "2026-10-31T00:00:00Z",
+            "stockAccountId": "account-1"
+        })).unwrap();
+        assert_eq!(Storage::run_scope(&run), Some("account-1"));
+        let another = AgentRun { stock_account_id: Some("account-2".into()), ..run };
+        assert_eq!(Storage::run_scope(&another), Some("account-2"));
+    }
+
+    #[test]
+    fn only_successful_sessions_are_resumed_after_a_failed_model_request() {
+        let base: AgentRun = serde_json::from_value(serde_json::json!({
+            "id": "failed", "agentId": "agent-1", "prompt": "review", "status": "failed",
+            "startedAt": "2026-10-31T00:00:00Z", "stockAccountId": "account-1", "sessionId": "broken-session"
+        })).unwrap();
+        let root = PathBuf::from("unused-session-query-fixture");
+        let storage = Storage {
+            root: root.clone(), bootstrap_root: root.clone(), data_dir: root.join("data"),
+            vault: Vault::new(&root), library: Library::new(&root),
+            cols: Collections {
+                agents: Arc::new(Mutex::new(vec![])),
+                runs: Arc::new(Mutex::new(vec![base.clone()])),
+                price_targets: Arc::new(Mutex::new(vec![])), price_samples: Arc::new(Mutex::new(vec![])),
+            },
+            settings: Arc::new(Mutex::new(AppSettings::default())),
+        };
+        assert_eq!(storage.latest_session_for("agent-1", "account-1"), None);
+        let successful = AgentRun { id: "successful".into(), status: models::AgentRunStatus::Succeeded, session_id: Some("valid-session".into()), ..base };
+        storage.cols.runs.lock().push(successful);
+        assert_eq!(storage.latest_session_for("agent-1", "account-1").as_deref(), Some("valid-session"));
+        assert_eq!(storage.latest_session_for("agent-1", "another-account"), None);
+    }
 
     /// 一份「每个字段都给值」的补丁。
     ///
