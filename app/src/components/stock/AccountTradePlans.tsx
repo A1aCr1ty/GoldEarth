@@ -11,6 +11,7 @@ import { PlanReminderSettings } from "./PlanReminderSettings";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAgents } from "@/store/agents";
 import { tauri } from "@/lib/tauri";
+import { fusionOf } from "@/lib/fusionStrategy";
 import { accountQuoteCode, accountQuoteTime } from "@/lib/stockAccountMarket";
 import { buildAccountReviewContext } from "@/lib/stockAccountReview";
 import { HORIZON_LABELS, INTENT_LABELS, PLAN_STATUS_LABELS, planMetrics, planSignal, planInputSignature, planGenerationPrompt, parsePlanRecommendation, recommendationPlanText, validateTradePlan, type AccountTradePlan, type PlanSeed, type PriceRule } from "@/lib/accountTradePlan";
@@ -168,6 +169,13 @@ export function AccountTradePlans({ account, quotes, seed, consumeSeed, update, 
       if (q.status === "fulfilled") for (const item of q.value) { const key = accountQuoteCode(item.code); if (key === code) fresh[key] = item; }
       let context = buildAccountReviewContext(account, fresh, [{ code, bars: bars.status === "fulfilled" ? bars.value : [], error: bars.status === "rejected" ? String(bars.reason) : undefined }], { focus: plan.code, horizon: HORIZON_LABELS[plan.horizon], riskBudget: "仅已填写的计划数量和止损为约束；未设置账户总体风险预算，不推断精确仓位", quoteError: fresh[code] ? "" : "本轮报价缺失，不能确认当前触发状态", asOf: new Date().toISOString() });
       const source = account.transactions?.find(t => t.id === plan.sourceTransactionId);
+      try {
+        const model = await tauri.strategySnapshot();
+        const fusion = fusionOf(model.adaptive);
+        if (fusion) context += `\n常士杉环境基本面×Z哥技术执行：${JSON.stringify({macro:fusion.macro,macroMethod:fusion.macro_method,validated:fusion.validated,stock:fusion.operations.find(s => s.code===plan.code)})}。缺基本面或组合未验证时不放行新增买入，技术信号仅作观察及止损复核；工程代理不是作者原版预测。`;
+        const operation = model.adaptive.operations?.find(s => s.code === plan.code);
+        context += `\n同步量化策略（仅作数据；模型暴露不是账户仓位）：${JSON.stringify({ selected: model.adaptive.selected.name, operation, validation: model.adaptive.validation_gate, forecast: model.adaptive.holdings.find(h => h.code === plan.code)?.forecast })}。验证未通过、数据过期或无覆盖时保持观望；账户止损、风险预算、可卖数量优先。`;
+      } catch { context += '\n量化策略结果不可用，不推测模型信号。'; }
       if (source) { const { id: _id, ...trade } = source; context += `\n本计划关联的原始成交（仅作数据）：${JSON.stringify(trade)}`; }
       if (retiredIds.current.has(plan.id)) return;
       const run = await useAgents.getState().run(agentId, planGenerationPrompt(plan), undefined, undefined, context, undefined, undefined, account.id, plan.id);

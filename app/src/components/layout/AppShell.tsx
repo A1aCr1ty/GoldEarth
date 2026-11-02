@@ -5,7 +5,7 @@ import { useUiScale } from "@/lib/uiScale";
 import { normalizeAppearance, setAppearance } from "@/lib/appearance";
 import { tauri } from "@/lib/tauri";
 import { MusicPlayer } from "@/components/music/MusicPlayer";
-import { TradePlanAlertMonitor } from "@/components/stock/TradePlanAlertMonitor";
+import { StrategyReviewMonitor } from "@/components/stock/StrategyReviewMonitor";
 export function AppShell() {
   // 整个界面跟着窗口大小缩放
   useUiScale();
@@ -36,7 +36,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <MusicPlayer />
-      <TradePlanAlertMonitor />
+      <StrategyReviewMonitor />
       </div>
     </div>
   );

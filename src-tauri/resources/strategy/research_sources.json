@@ -1,0 +1,83 @@
+{
+  "reviewedOn": "2026-11-02",
+  "sources": [
+    {
+      "id": "z-b1",
+      "author": "zettaranc",
+      "title": "B1 / BBI 趋势回调（公开学习整理）",
+      "url": "https://www.bilibili.com/opus/1100989152418070552",
+      "evidence": "二手整理，未取得作者原始完整讲义",
+      "implementation": "J值超卖后转强、BBI上行与关键K止损；KDJ(9,3,3)、J阈值-10/-20、最长20日持有为工程假设，非原版公式。"
+    },
+    {
+      "id": "z-b2",
+      "author": "zettaranc",
+      "title": "B2 放量确认（公开学习整理）",
+      "url": "https://www.noteol.com/xuexi/ZG_B2zhanfa.html",
+      "evidence": "二手整理；不同整理的涨幅和量比阈值不一致",
+      "implementation": "最近5日J超卖后，阳线涨幅≥4%、量≥前5日均量1.5倍、收盘高于BBI；关键K低点及紧邻次日3/4阴量退出。窗口和数值为预先固定的研究近似。"
+    },
+    {
+      "id": "chang-wave",
+      "author": "常士杉",
+      "title": "集中子弹打游击：波段滚动复利法（采访）",
+      "url": "https://finance.sina.com.cn/money/fund/20100523/22157987587.shtml",
+      "evidence": "公开采访；仅核实低买、反弹兑现、仓位纪律的理念",
+      "implementation": "MA60上行，单日跌3%后反弹交易；盈利5%、亏损5%或5日退出为工程假设。未复刻调研、主观择时或三低基本面选股。"
+    },
+    {
+      "id": "chang-five",
+      "author": "常士杉",
+      "title": "5日线法则公开提及及项目已有五日战法证据",
+      "url": "https://www.patreon.com/SiMuYiGeChangShiShan/posts/zhi-bo-zong-jie-159950694",
+      "evidence": "公开摘要仅提及5日线/7.5法则；细节沿用docs/stock-quant.md记录的用户资料，不视作本次网络独立核实",
+      "implementation": "收盘>MA5、连续3日增量、7日内量/前日量≥1.45；跌至MA5的92.5%一次减半，再跌破MA20清仓。补充退出规则属于工程假设。"
+    },
+    {
+      "id": "chang-3221",
+      "author": "常士杉",
+      "title": "3221 阶段止盈（既有字幕核实记录）",
+      "url": "https://www.bilibili.com/video/BV18fjb6VEwo",
+      "evidence": "既有切片自动字幕核对；比例基数及部分区间不确定",
+      "implementation": "只在账户中按真实成本给出阶段参考，不自动补齐比例、不作为已完整回测的策略。"
+    },
+    {
+      "id": "chang-three-low",
+      "author": "常士杉",
+      "title": "三低选股法（采访）",
+      "url": "https://finance.sina.com.cn/roll/2016-12-17/doc-ifxytqax6349837.shtml",
+      "evidence": "公开采访",
+      "implementation": "缺少历史时点估值、行业和基本面，登记为待数据，不用当前估值倒填历史回测。"
+    },
+    {
+      "id": "chang-articles-v2",
+      "author": "常士杉（用户提供文章）",
+      "title": "css更新：五日战法与风险预算修订",
+      "url": "",
+      "evidence": "本地PDF：6月14日五日战法详细版第2—4页、8月9日20%强止损第1及3页；关键页已渲染核对",
+      "implementation": "保留旧版对照；修订版取消MA20额外退出，MA5下方7.5%仅减半一次；20%按下一日开盘成本解释仅作研究假设。活跃量=连续3日量≥各自此前5日均量；ATR版止损=3ATR14，限制8%—20%，均为工程假设。4.5%再入场因公式歧义不启用；财报/行业条件因缺历史时点数据未模拟。"
+    },
+    {
+      "id": "github-z-dual",
+      "author": "GitHub社区（非官方）",
+      "title": "B1-selector：双线/KDJ/MACD/缩量规则",
+      "url": "https://github.com/lhy102731/B1-selector",
+      "evidence": "已读仓库README；J阈值与其他项目不一致，不能视为统一原版",
+      "implementation": "白线EMA(EMA(C,10),10)，黄线MA14/28/57/114均值；J<30、缩量0.618、DIF>0；N型采用窗口近似，市值及换手缺数据，不称完整复刻。"
+    },
+    {
+      "id": "github-chang-fundamental",
+      "author": "GitHub社区（非官方）",
+      "title": "常士杉财报四核心及基本面框架",
+      "url": "https://github.com/solanax7/us-stock-analyzer-skill/blob/main/references/fundamental-analysis-framework.md",
+      "evidence": "已读取原文；为美股分析框架，迁移A股需验证",
+      "implementation": "收入增长、毛利率变化、经营现金流、净利润；补充ROE/估值审查。20%营收、15%ROE、70%估值分位和180日时效均为研究筛选口径，非普适公式。不采用“必跌”等确定性断言。"
+    }
+  ],
+  "limitations": [
+    "工程近似不等于作者原版，也不代表作者认可。",
+    "股票池来自当前存续公司，存在幸存者和选样偏差，未覆盖退市样本。",
+    "日线模拟不含盘口、最小佣金、整数手、真实账户资金及逐日ST状态；涨跌停为保守近似。",
+    "历史回测不能证明未来盈利；新规则须积累发布后的前瞻记录。"
+  ]
+}

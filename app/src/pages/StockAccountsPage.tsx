@@ -9,9 +9,8 @@ import { importHoldingsFile, mergeTransactions, positionMarketValue, sumPosition
 import { valueAccountPositions, accountQuoteTime } from "@/lib/stockAccountMarket";
 import { useAccountQuotes } from "@/lib/useAccountQuotes";
 import { AccountTransactions } from "@/components/stock/AccountTransactions";
-import { AccountReviewPanel } from "@/components/stock/AccountReviewPanel";
-import { AccountTradePlans } from "@/components/stock/AccountTradePlans";
-import type { AccountTradePlan, PlanSeed } from "@/lib/accountTradePlan";
+import { AccountStrategyAdvice } from "@/components/stock/AccountStrategyAdvice";
+import { HoldingSwingPanel } from "@/components/stock/HoldingSwingPanel";
 import { readStockAccounts as readAccounts, saveStockAccounts as saveAccounts } from "@/lib/stockAccountStorage";
 
 const money = (n: number | null | undefined) => n == null ? "—" : `¥${n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -22,9 +21,8 @@ export default function StockAccountsPage() {
   const [accounts, setAccounts] = useState<StockAccount[]>(readAccounts);
   const accountsRef = useRef(accounts);
   const [tab, setTab] = useState("overview");
-  const [planSeed, setPlanSeed] = useState<PlanSeed | null>(null);
   const [selectedId, setSelectedId] = useState(() => readAccounts()[0]?.id ?? "");
-  useEffect(() => { const id = search.get("account"); if (id && accountsRef.current.some(a => a.id === id)) { setSelectedId(id); setTab("plans"); } }, [search]);
+  useEffect(() => { const id = search.get("account"); if (id && accountsRef.current.some(a => a.id === id)) { setSelectedId(id); setTab("overview"); } }, [search]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [broker, setBroker] = useState("同花顺投资账本");
@@ -33,7 +31,7 @@ export default function StockAccountsPage() {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const selected = accounts.find((a) => a.id === selectedId) ?? accounts[0];
-  const quotePositions = useMemo(() => [...(selected?.positions ?? []), ...(selected?.tradePlans ?? []).filter(p => (p.status === "active" || p.status === "draft") && !selected?.positions.some(h => h.code === p.code)).map(p => ({ code: p.code, name: p.name, quantity: 0, available: null, cost: null, price: null, profit: null }))], [selected]);
+  const quotePositions = selected?.positions ?? [];
   const market = useAccountQuotes(selected?.id ?? "", quotePositions);
   const valuedPositions = useMemo(() => valueAccountPositions(selected?.positions ?? [], market.quotes), [selected, market.quotes]);
   const totals = useMemo(() => {
@@ -45,7 +43,6 @@ export default function StockAccountsPage() {
     };
   }, [valuedPositions]);
   const persist = (next: StockAccount[]) => { saveAccounts(next); accountsRef.current = next; setAccounts(next); };
-  const updatePlan = (accountId: string, id: string, change: (p: AccountTradePlan) => AccountTradePlan) => persist(accountsRef.current.map(a => a.id === accountId ? { ...a, tradePlans: (a.tradePlans ?? []).map(p => p.id === id ? change(p) : p) } : a));
 
   const addAccount = () => {
     if (!name.trim()) return;
@@ -97,6 +94,7 @@ export default function StockAccountsPage() {
           </div>
 
           {selected ? <>
+            <AccountStrategyAdvice account={selected} />
             <Card>
               <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
                 <div className="flex items-center gap-3"><div className="rounded-xl bg-primary/10 p-3 text-primary"><BriefcaseBusiness className="h-5 w-5" /></div><div><div className="font-semibold">{selected.name}</div><div className="mt-1 text-xs text-muted-foreground">{selected.broker}{selected.number ? ` · 账号 ${selected.number}` : ""}</div></div></div>
@@ -105,7 +103,7 @@ export default function StockAccountsPage() {
             </Card>
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>行情每 10 秒刷新 · 最近获取 {market.fetchedAt || "尚未获取"} · 每只证券标注报价时间，闭市报价可能为上一交易日</span><span>数量与成本来自最近导入，新增买卖需重新导入账本</span></div>
             {market.error && <p role="status" className="text-xs text-destructive">{market.error}</p>}
-            <nav aria-label="账户功能" className="flex flex-wrap gap-1 border-b pb-2">{[["overview", "持仓概览"], ["plans", "交易计划"], ["transactions", "买卖流水"], ["review", "AI 复盘"]].map(([key, label]) => <Button key={key} variant={tab === key ? "secondary" : "ghost"} size="sm" onClick={() => setTab(key)} aria-current={tab === key ? "page" : undefined}>{label}{key === "plans" && ` (${selected.tradePlans?.length ?? 0})`}</Button>)}</nav>
+            <nav aria-label="账户功能" className="flex flex-wrap gap-1 border-b pb-2">{[["overview", "持仓概览"], ["swing", "波段操作"], ["transactions", "买卖流水"]].map(([key, label]) => <Button key={key} variant={tab === key ? "secondary" : "ghost"} size="sm" onClick={() => setTab(key)} aria-current={tab === key ? "page" : undefined}>{label}</Button>)}</nav>
             {tab === "overview" && <>
             <div className="grid gap-3 sm:grid-cols-3">
               {[{ label: "持仓市值", value: money(totals.market), style: "" }, { label: "估算持有盈亏", value: money(totals.profit), style: profitClass(totals.profit) }, { label: "持仓数量", value: `${selected.positions.length} 只`, style: "" }].map((item) => <Card key={item.label}><CardContent className="p-4"><div className="text-xs text-muted-foreground">{item.label}</div><div className={`mt-2 text-xl font-semibold tabular-nums ${item.style}`}>{item.value}</div></CardContent></Card>)}
@@ -117,13 +115,12 @@ export default function StockAccountsPage() {
               </CardContent>
             </Card>
             </>}
-            {tab === "plans" && <AccountTradePlans key={`plans-${selected.id}`} account={selected} quotes={market.quotes} remove={id => persist(accountsRef.current.map(a => a.id === selected.id ? { ...a, tradePlans: (a.tradePlans ?? []).filter(p => p.id !== id) } : a))} seed={planSeed} consumeSeed={() => setPlanSeed(null)} update={(id, change) => updatePlan(selected.id, id, change)} add={p => persist(accountsRef.current.map(a => a.id === selected.id ? { ...a, tradePlans: [p, ...(a.tradePlans ?? [])] } : a))} />}
-            {tab === "transactions" && <AccountTransactions key={`transactions-${selected.id}`} account={selected} onPlan={seed => { setPlanSeed(seed); setTab("plans"); }} />}
-            {tab === "review" && <AccountReviewPanel key={`review-${selected.id}`} account={selected} quotes={market.quotes} quoteError={market.error} />}
+            {tab === "swing" && <HoldingSwingPanel key={`swing-${selected.id}`} account={selected} />}
+            {tab === "transactions" && <AccountTransactions key={`transactions-${selected.id}`} account={selected} />}
           </> : <Card><CardContent className="flex flex-col items-center px-6 py-16 text-center"><Wallet className="mb-3 h-9 w-9 text-muted-foreground/50" /><div className="font-medium">添加你的第一个股票账户</div><p className="mt-1 text-sm text-muted-foreground">每个账户独立保存持仓快照和同步时间。</p><Button className="mt-4" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4" />添加账户</Button></CardContent></Card>}
 
           {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
-          <div className="flex items-start gap-2 rounded-lg border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0" /><span>XLSX 同时读取持仓、交易记录和已清仓结果；流水重复导入会合并去重。未带账号的汇总数据归入当前账户。行情更新的是已有持仓的估值，导入后的新成交、分红与费用需重新导入；持有盈亏为估算值。文件在本机解析，点击 AI 复盘时发送所选数据。</span></div>
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground"><CircleHelp className="mt-0.5 h-4 w-4 shrink-0" /><span>XLSX 同时读取持仓、交易记录和已清仓结果；流水重复导入会合并去重。未带账号的汇总数据归入当前账户。行情更新的是已有持仓的估值，导入后的新成交、分红与费用需重新导入；持有盈亏为估算值。文件在本机解析。</span></div>
         </div>
       </div>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

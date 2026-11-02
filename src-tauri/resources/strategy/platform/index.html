@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>策略验证台 · 回测分析</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --ink: #17202a;
+    --muted: #697586;
+    --line: #e4e8ee;
+    --soft: #f0f3f7;
+    --accent: #315fce;
+    --accent-soft: #edf2ff;
+    --up: #b4423c;
+    --down: #16805a;
+    --warn: #9a6216;
+    --warn-bg: #fff7e7;
+    --shadow: 0 4px 18px rgba(30, 45, 70, .045);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  button, input, select { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  header, main { width: min(1240px, calc(100% - 40px)); margin: 0 auto; }
+  header { padding: 30px 0 12px; display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+  h1 { font-size: 27px; line-height: 1.25; margin: 0 0 7px; font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 18px; margin: 0; font-weight: 680; }
+  h3 { font-size: 15px; margin: 0; }
+  .sub, .meta, .note { color: var(--muted); }
+  .sub { margin: 0; }
+  .note { font-size: 12px; line-height: 1.65; }
+  .generated { font-size: 12px; color: var(--muted); white-space: nowrap; padding-top: 5px; }
+  nav { display: flex; gap: 4px; padding: 10px 0; position: sticky; top: 0; background: rgba(245,246,248,.96); backdrop-filter: blur(8px); z-index: 5; border-bottom: 1px solid var(--line); }
+  nav button { border: 0; background: transparent; color: var(--muted); padding: 9px 15px; border-radius: 7px; font-weight: 600; cursor: pointer; }
+  nav button:hover { background: var(--soft); color: var(--ink); }
+  nav button.active { color: var(--accent); background: var(--accent-soft); }
+  section { display: none; padding: 20px 0 48px; }
+  section.active { display: block; }
+  .section-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+  .section-head p { margin: 4px 0 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .hero { padding: 22px; margin-bottom: 14px; }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+  .strategy-name { font-size: 21px; font-weight: 700; margin: 3px 0 5px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .badge { display: inline-flex; align-items: center; border-radius: 99px; padding: 3px 9px; font-size: 12px; font-weight: 600; background: var(--soft); color: var(--muted); }
+  .badge.good { color: var(--down); background: #eaf7f1; }
+  .badge.warn { color: var(--warn); background: var(--warn-bg); }
+  .badge.info { color: var(--accent); background: var(--accent-soft); }
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; }
+  .kpi { background: var(--soft); border-radius: 9px; padding: 13px 14px; min-width: 0; }
+  .kpi .v { font-size: 23px; line-height: 1.25; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+  .kpi .l { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .kpi .d { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-top: 14px; }
+  .compare > div { background: var(--panel); padding: 11px 14px; }
+  .compare b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .compare span { color: var(--muted); font-size: 12px; }
+  .warning { margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: #75501b; font-size: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .mini-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mini-metrics > div { border-left: 2px solid var(--line); padding-left: 9px; }
+  .mini-metrics b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .mini-metrics span { color: var(--muted); font-size: 11px; }
+  .holds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hold { border: 1px solid var(--line); border-radius: 10px; padding: 15px; background: var(--panel); }
+  .hold h3 { font-size: 16px; margin-bottom: 4px; }
+  .hold .title { color: var(--accent); font-weight: 650; margin: 7px 0; }
+  .hold ol { margin: 8px 0 0; padding-left: 19px; }
+  .hold li { margin: 5px 0; }
+  .hold .position { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .segmented { display: inline-flex; padding: 3px; border-radius: 8px; background: var(--soft); gap: 2px; }
+  .segmented button { border: 0; background: transparent; color: var(--muted); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  .segmented button.active { background: var(--panel); color: var(--accent); box-shadow: 0 1px 4px rgba(30,45,70,.1); font-weight: 650; }
+  input, select { color: var(--ink); padding: 7px 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 7px; }
+  input { min-width: 220px; }
+  .chart-card { padding-bottom: 12px; }
+  .chart-box + .chart-box { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .chart-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .legend { display: flex; gap: 15px; font-size: 12px; color: var(--muted); }
+  .swatch { display: inline-block; width: 16px; height: 3px; margin-right: 6px; vertical-align: middle; }
+  svg { width: 100%; display: block; touch-action: pan-y; }
+  #equity-chart { height: 330px; }
+  #dd-chart { height: 145px; }
+  .readout { min-height: 21px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; padding: 2px 8px 0; }
+  .table-title { margin: 22px 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 650; background: #fafbfc; position: sticky; top: 0; z-index: 1; }
+  th[data-k] { cursor: pointer; }
+  th[data-k]:hover { color: var(--accent); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fafbfc; }
+  td.num, th.num { text-align: right; }
+  tr.pin { background: var(--accent-soft); }
+  tr.pin:hover { background: #e5edff; }
+  .empty { color: var(--muted); text-align: center; padding: 24px; }
+  .foot-note { margin: 14px 2px 0; }
+  @media (max-width: 1050px) {
+    .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    header, main { width: min(1240px, calc(100% - 20px)); }
+    header { padding-top: 20px; display: block; }
+    .generated { margin-top: 6px; }
+    nav { overflow-x: auto; }
+    nav button { white-space: nowrap; padding: 8px 11px; }
+    .hero-top, .section-head { display: block; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-2, .holds { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .mini-metrics { grid-template-columns: repeat(2, 1fr); row-gap: 14px; }
+    .card { padding: 14px; }
+    #equity-chart { height: 260px; }
+    input { min-width: 170px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>策略验证台</h1>
+    <p class="sub" id="subtitle">正在读取回测结果…</p>
+  </div>
+  <div class="generated" id="generated"></div>
+</header>
+<main>
+  <nav aria-label="看板视图">
+    <button id="tab-overview" class="active" type="button">总览</button>
+    <button id="tab-backtest" type="button">回测分析</button>
+    <button id="tab-decision" type="button">个股决策</button>
+    <button id="tab-train" type="button">参数训练</button>
+  </nav>
+
+  <section id="view-overview" class="active">
+    <div id="adaptive-overview"><div class="card">正在读取多策略回测…</div></div>
+    <div class="grid-2">
+      <article class="card">
+        <div class="card-head"><h2>旧趋势模型</h2><span class="badge">收盘到收盘</span></div>
+        <p class="note" id="trend-source"></p>
+        <div class="mini-metrics" id="trend-kpis" style="margin-top:14px"></div>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2>深跌修复模型</h2><span class="badge">追加本金已扣除</span></div>
+        <p class="note" id="repair-source"></p>
+        <div class="mini-metrics" id="repair-kpis" style="margin-top:14px"></div>
+      </article>
+    </div>
+    <div class="table-title"><h2>持仓操作与走势研究</h2><span class="note">预测未通过验证时不提供方向</span></div>
+    <div class="holds" id="forecast-holds"></div>
+    <div class="table-title"><h2>持仓修复计划</h2></div>
+    <div class="holds" id="holds"></div>
+    <p class="note foot-note" id="method"></p>
+  </section>
+
+  <section id="view-backtest">
+    <div class="section-head">
+      <div><h2>回测分析</h2><p class="note" id="backtest-caption">净值、回撤和分年表现使用同一模型与区间</p></div>
+      <div class="segmented" id="model-switch">
+        <button type="button" data-model="adaptive" class="active">多策略 · 次日开盘</button>
+        <button type="button" data-model="trend">旧趋势 · 收盘</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="segmented" id="slice-switch">
+        <button type="button" data-slice="test" class="active">检验 2024 至今</button>
+        <button type="button" data-slice="valid">验证 2022–2023</button>
+        <button type="button" data-slice="train">训练 2015–2021</button>
+      </div>
+    </div>
+    <div class="kpis" id="backtest-kpis" style="margin:0 0 14px"></div>
+    <div class="card chart-card">
+      <div class="chart-box">
+        <div class="chart-title">
+          <h3>累计净值</h3>
+          <div class="legend"><span><i class="swatch" style="background:#315fce"></i>策略</span><span><i class="swatch" style="background:#98a2b3"></i>等权持有</span></div>
+        </div>
+        <svg id="equity-chart" viewBox="0 0 1100 330" role="img" aria-label="策略和等权持有累计净值"></svg>
+        <div class="readout" id="equity-readout">移动鼠标或触摸图表查看每周数据</div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title"><h3>策略回撤</h3><span class="note">越接近 0 越好</span></div>
+        <svg id="dd-chart" viewBox="0 0 1100 145" role="img" aria-label="策略历史回撤"></svg>
+        <div class="readout" id="dd-readout"></div>
+      </div>
+    </div>
+    <div class="table-title"><h2>分年表现</h2><span class="note">不足 15 个交易日的年份不展示</span></div>
+    <div class="wrap"><table id="yearly"></table></div>
+    <div id="candidate-section">
+      <div class="table-title">
+        <h2>候选策略对照</h2>
+        <label class="note">排序 <select id="candidate-sort"><option value="valid_sharpe">验证夏普</option><option value="test_sharpe">检验夏普</option><option value="test_return">检验收益</option><option value="test_maxdd">检验回撤</option></select></label>
+      </div>
+      <p class="note" style="margin:0 0 10px" id="selection-note"></p>
+      <div class="wrap"><table id="adaptive-grid"></table></div>
+    </div>
+    <p class="note foot-note">净值为对应区间内的累计值，未把每段首个周点强行设为 1。收益已计交易成本；样本外结果只用于评价，不参与参数选择。</p>
+  </section>
+
+  <section id="view-decision">
+    <div class="section-head"><div><h2>个股决策</h2><p class="note">点击表头排序；两只当前持仓始终置顶</p></div></div>
+    <div class="toolbar">
+      <input id="q" placeholder="代码、名称或行业" aria-label="搜索股票" />
+      <select id="sig" aria-label="筛选信号">
+        <option value="">全部信号</option><option value="持有">趋势持有</option><option value="空仓">趋势空仓</option>
+        <option value="可右侧加仓">可右侧加仓</option><option value="可卖出波段">可卖出波段</option>
+        <option value="个股在60日线上，不做反弹卖出">个股在线上</option>
+      </select>
+      <span class="note" id="count"></span>
+    </div>
+    <div class="holds" id="holds-2" style="margin-bottom:14px"></div>
+    <div class="wrap"><table id="stocks"></table></div>
+  </section>
+
+  <section id="view-train">
+    <div class="section-head"><div><h2>参数训练记录</h2><p class="note">保留完整网格，便于识别参数孤岛和过拟合</p></div></div>
+    <div class="card">
+      <div class="card-head"><h3>旧趋势参数</h3></div>
+      <p class="note" style="margin-bottom:12px">按训练期收益回撤比排序只是展示。真正留下的那一行，必须在 2022–2023 年验证期仍有超额，检验列不参与挑选。</p>
+      <div class="wrap"><table id="trend-grid"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>深跌修复参数</h3><span class="badge">财富差已扣除追加本金</span></div>
+      <p class="note" id="repair-counts" style="margin-bottom:12px"></p>
+      <div class="wrap"><table id="repair-grid"></table></div>
+    </div>
+  </section>
+</main>
+<script>
+const views = ["overview", "backtest", "decision", "train"];
+let DATA = null;
+let ADAPTIVE = null;
+let slice = "test";
+let backtestModel = "adaptive";
+let sortKey = "test_excess";
+let sortDir = -1;
+
+const $ = id => document.getElementById(id);
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function pct(x, digits = 1) {
+  if (x === null || x === undefined || !Number.isFinite(Number(x))) return "—";
+  const v = Number(x) * 100;
+  return (v > 0 ? "+" : "") + v.toFixed(digits) + "%";
+}
+function num(x, digits = 2) {
+  return x === null || x === undefined || !Number.isFinite(Number(x)) ? "—" : Number(x).toFixed(digits);
+}
+function cls(x) { return Number(x) > 0 ? "up" : Number(x) < 0 ? "down" : ""; }
+function pp(x, digits = 1) {
+  if (!Number.isFinite(Number(x))) return "—";
+  const v = Number(x) * 100;
+  return (v > 0 ? "+" : "") + v.toFixed(digits) + " 个百分点";
+}
+function yuan(x) {
+  const n = Math.round(Number(x));
+  return (n > 0 ? "+" : "") + n.toLocaleString("zh-CN");
+}
+function kpi(label, value, klass, detail = "") {
+  return `<div class="kpi"><div class="v ${klass || ""}">${value}</div><div class="l">${label}</div>${detail ? `<div class="d">${detail}</div>` : ""}</div>`;
+}
+function mini(label, value, klass = "") {
+  return `<div><b class="${klass}">${value}</b><span>${label}</span></div>`;
+}
+function holdCard(h) {
+  const pnlLabel = Number(h.pnl) >= 0 ? "浮盈" : "浮亏";
+  return `<article class="hold">
+    <h3>${esc(h.name)} <span class="meta">${esc(h.code)}</span></h3>
+    <div class="title">${esc(h.decision)}</div>
+    <div class="meta">${h.shares} 股 · 成本 ${h.cost.toFixed(2)} · 现价 ${h.close.toFixed(2)} · ${pnlLabel} ${yuan(h.pnl)}（${pct(h.pnl_pct)}）· 回到成本还需 ${pct(h.need_up)}</div>
+    <ol>${h.detail.map(d => `<li>${esc(d)}</li>`).join("")}</ol>
+  </article>`;
+}
+function drawdownOf(values) {
+  let peak = -Infinity;
+  return values.map(v => { peak = Math.max(peak, v); return v / peak - 1; });
+}
+function curveFor(model, period) {
+  if (model === "adaptive" && ADAPTIVE) return ADAPTIVE.curves[period];
+  const c = DATA.trend.curves[period];
+  return {...c, drawdown: drawdownOf(c.strategy), exposure: []};
+}
+function metricsFor(model, period) {
+  return model === "adaptive" && ADAPTIVE ? ADAPTIVE.selected[period] : DATA.trend.splits[period];
+}
+function normalizedMetrics(m, model) {
+  if (model === "adaptive") return m;
+  return {return: m.strategy_return, hold_return: m.hold_return, excess: m.excess, maxdd: m.strategy_maxdd, hold_maxdd: m.hold_maxdd, annual_return: null, sharpe: null, exposure: null, annual_turnover: null, n: m.n};
+}
+function pathOf(arr, X, Y) {
+  return arr.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+}
+function drawBacktest() {
+  document.querySelectorAll("[data-slice]").forEach(b => b.classList.toggle("active", b.dataset.slice === slice));
+  document.querySelectorAll("[data-model]").forEach(b => b.classList.toggle("active", b.dataset.model === backtestModel));
+  $("candidate-section").style.display = backtestModel === "adaptive" ? "block" : "none";
+  const box = curveFor(backtestModel, slice);
+  const raw = metricsFor(backtestModel, slice);
+  const m = normalizedMetrics(raw, backtestModel);
+  $("backtest-caption").textContent = backtestModel === "adaptive" && ADAPTIVE ? `${ADAPTIVE.selected.name} · ${ADAPTIVE.execution}` : `MA${DATA.trend.frozen.ma}${DATA.trend.frozen.gate ? " + 市场过滤" : ""} · 收盘信号，下一段收盘收益`;
+  $("backtest-kpis").innerHTML = [
+    kpi("策略收益", pct(m.return), cls(m.return), m.annual_return === null ? `${m.n || 0} 个交易日` : `年化 ${pct(m.annual_return)}`),
+    kpi("等权持有", pct(m.hold_return), cls(m.hold_return), "相同样本与区间"),
+    kpi("累计超额", pct(m.excess), cls(m.excess), "收益差，非年化"),
+    kpi("夏普比率", num(m.sharpe), "", "0 无风险利率"),
+    kpi("策略最大回撤", pct(m.maxdd), cls(m.maxdd), `持有 ${pct(m.hold_maxdd)}`),
+    kpi("平均仓位", pct(m.exposure), "", m.annual_turnover === null ? "旧模型未记录" : `年换手 ${num(m.annual_turnover, 1)} 倍`),
+  ].join("");
+  const svg = $("equity-chart"), ddSvg = $("dd-chart");
+  const s = box.strategy || [], h = box.hold || [], dates = box.dates || [], dd = box.drawdown || [];
+  if (!s.length) {
+    svg.innerHTML = "<text x='550' y='165' text-anchor='middle' fill='#697586'>该区间没有数据</text>";
+    ddSvg.innerHTML = "";
+    return;
+  }
+  const w = 1100, ht = 330, left = 58, right = 24, top = 24, bottom = 35;
+  const all = s.concat(h), lo = Math.min(...all), hi = Math.max(...all);
+  const margin = Math.max(.02, (hi - lo) * .08), min = lo - margin, max = hi + margin;
+  const X = i => left + i * (w - left - right) / Math.max(1, s.length - 1);
+  const Y = v => top + (max - v) * (ht - top - bottom) / (max - min);
+  const grid = Array.from({length: 5}, (_, i) => {
+    const v = min + (max - min) * i / 4, y = Y(v);
+    return `<line x1="${left}" x2="${w-right}" y1="${y}" y2="${y}" stroke="#e8ecf1"/><text x="${left-9}" y="${y+4}" text-anchor="end" fill="#697586" font-size="11">${v.toFixed(2)}</text>`;
+  }).join("");
+  const ticks = Array.from({length: 5}, (_, i) => {
+    const idx = Math.round((s.length - 1) * i / 4);
+    return `<text x="${X(idx)}" y="${ht-9}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}" fill="#697586" font-size="11">${dates[idx]}</text>`;
+  }).join("");
+  svg.innerHTML = `${grid}${ticks}
+    <path d="${pathOf(h, X, Y)}" fill="none" stroke="#98a2b3" stroke-width="1.8"/>
+    <path d="${pathOf(s, X, Y)}" fill="none" stroke="#315fce" stroke-width="2.4"/>
+    <line id="equity-cursor" x1="0" x2="0" y1="${top}" y2="${ht-bottom}" stroke="#315fce" stroke-opacity=".25" visibility="hidden"/>
+    <circle id="equity-dot" r="4" fill="#315fce" visibility="hidden"/>`;
+  const dh = 145, dTop = 12, dBottom = 25, dMin = Math.min(-.01, ...dd) * 1.12;
+  const DY = v => dTop + (0 - v) * (dh - dTop - dBottom) / (0 - dMin);
+  const ddPath = pathOf(dd, X, DY);
+  ddSvg.innerHTML = `<line x1="${left}" x2="${w-right}" y1="${DY(0)}" y2="${DY(0)}" stroke="#cfd6df"/>
+    <text x="${left-9}" y="${DY(0)+4}" text-anchor="end" fill="#697586" font-size="11">0%</text>
+    <text x="${left-9}" y="${DY(dMin)+4}" text-anchor="end" fill="#697586" font-size="11">${pct(dMin, 0)}</text>
+    <path d="${ddPath} L${X(dd.length-1)},${DY(0)} L${X(0)},${DY(0)} Z" fill="#b4423c" fill-opacity=".09"/>
+    <path d="${ddPath}" fill="none" stroke="#b4423c" stroke-width="1.6"/>
+    <line id="dd-cursor" x1="0" x2="0" y1="${dTop}" y2="${dh-dBottom}" stroke="#315fce" stroke-opacity=".25" visibility="hidden"/>`;
+  const showPoint = ev => {
+    const rect = svg.getBoundingClientRect();
+    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const x = (clientX - rect.left) / rect.width * w;
+    let i = Math.round((x - left) / (w - left - right) * (s.length - 1));
+    i = Math.max(0, Math.min(s.length - 1, i));
+    $("equity-readout").textContent = `${dates[i]} · 策略 ${s[i].toFixed(3)} · 持有 ${h[i].toFixed(3)} · 净值差 ${pct(s[i]-h[i])}${box.exposure && box.exposure.length ? ` · 仓位 ${pct(box.exposure[i], 0)}` : ""}`;
+    $("dd-readout").textContent = `${dates[i]} · 当前回撤 ${pct(dd[i])}`;
+    for (const id of ["equity-cursor", "dd-cursor"]) { $(id).setAttribute("x1", X(i)); $(id).setAttribute("x2", X(i)); $(id).setAttribute("visibility", "visible"); }
+    $("equity-dot").setAttribute("cx", X(i)); $("equity-dot").setAttribute("cy", Y(s[i])); $("equity-dot").setAttribute("visibility", "visible");
+  };
+  svg.onmousemove = showPoint;
+  svg.ontouchstart = showPoint;
+  svg.ontouchmove = showPoint;
+  svg.onmouseleave = () => { for (const id of ["equity-cursor", "dd-cursor", "equity-dot"]) $(id).setAttribute("visibility", "hidden"); };
+}
+function renderAdaptiveOverview() {
+  if (!ADAPTIVE) { $("adaptive-overview").innerHTML = "<div class='card'>未读取到 adaptive_results.json，请先运行 strategy_lab.py。</div>"; return; }
+  const s = ADAPTIVE.selected, t = s.test, b = ADAPTIVE.baseline.test, gate = ADAPTIVE.validation_gate;
+  const riskText = gate.risk_adjusted_improvement ? "风险调整改善" : "风险调整未改善";
+  $("adaptive-overview").innerHTML = `<article class="card hero">
+    <div class="hero-top"><div><div class="meta">当前冻结策略 · ${esc(s.family)}</div><div class="strategy-name">${esc(s.name)}</div><div class="note">${esc(ADAPTIVE.selection.objective)}</div>
+      <div class="badges"><span class="badge ${gate.sample_out_profitable ? "good" : "warn"}">样本外${gate.sample_out_profitable ? "盈利" : "亏损"}</span><span class="badge ${gate.risk_adjusted_improvement ? "good" : "warn"}">${riskText}</span><span class="badge ${gate.positive_excess ? "good" : "warn"}">${gate.positive_excess ? "跑赢等权" : "未跑赢等权"}</span></div></div>
+      <span class="badge info">检验 ${esc(t.start)} 至 ${esc(t.end)}</span></div>
+    <div class="kpis">
+      ${kpi("样本外净收益", pct(t.return), cls(t.return), `年化 ${pct(t.annual_return)}`)}
+      ${kpi("夏普比率", num(t.sharpe), "", `原策略 ${num(b.sharpe)}`)}
+      ${kpi("最大回撤", pct(t.maxdd), cls(t.maxdd), `等权 ${pct(t.hold_maxdd)}`)}
+      ${kpi("等权持有", pct(t.hold_return), cls(t.hold_return), "同期买入持有")}
+      ${kpi("平均仓位", pct(t.exposure), "", `年换手 ${num(t.annual_turnover, 1)} 倍`)}
+      ${kpi("完整交易", `${s.test_trades.n} 笔`, "", `胜率 ${pct(s.test_trades.win_rate)}`)}
+    </div>
+    <div class="compare">
+      <div><span>净收益相对原 Donchian20/10</span><b class="${cls(t.return-b.return)}">${pp(t.return-b.return)}</b></div>
+      <div><span>夏普变化（越高越好）</span><b class="${cls(t.sharpe-b.sharpe)}">${t.sharpe-b.sharpe >= 0 ? "+" : ""}${num(t.sharpe-b.sharpe, 3)}</b></div>
+      <div><span>最大回撤改善</span><b class="${cls(t.maxdd-b.maxdd)}">${pp(t.maxdd-b.maxdd)}</b></div>
+    </div>
+    ${gate.positive_excess ? "" : `<div class="warning">本方案优化的是风险调整表现，不是绝对收益：样本外累计超额 ${pct(t.excess)}。不应把较低回撤等同于跑赢市场。</div>`}
+  </article>`;
+}
+function renderOverview() {
+  const t = DATA.trend.splits.test, r = DATA.repair.splits.test;
+  $("trend-source").textContent = `${DATA.trend.frozen.source}。MA${DATA.trend.frozen.ma}${DATA.trend.frozen.gate ? "，指数防守时空仓" : ""}；${DATA.universe} 只股票。`;
+  $("trend-kpis").innerHTML = [mini("策略收益", pct(t.strategy_return), cls(t.strategy_return)), mini("等权持有", pct(t.hold_return), cls(t.hold_return)), mini("累计超额", pct(t.excess), cls(t.excess)), mini("最大回撤", pct(t.strategy_maxdd), cls(t.strategy_maxdd))].join("");
+  $("repair-source").textContent = `${DATA.repair.frozen.source}。反弹 ${Math.round(DATA.repair.frozen.bounce*100)}%、回落 ${Math.round(DATA.repair.frozen.dip*100)}%、RSI ${DATA.repair.frozen.rsi_sell}、${DATA.repair.frozen.enable_add ? "允许加仓" : "禁止加仓"}。`;
+  $("repair-kpis").innerHTML = [mini("策略回本率", pct(r.strategy_recover)), mini("持有回本率", pct(r.hold_recover)), mini("可比财富中位差", pct(r.lift), cls(r.lift)), mini("检验样本", `${r.n} 次`)].join("");
+  const html = DATA.holdings.map(holdCard).join("");
+  $("holds").innerHTML = html;
+  $("holds-2").innerHTML = html;
+  const m = DATA.method;
+  $("method").textContent = `训练 ${m.train}。验证 ${m.valid}。检验 ${m.test}。${m.cost}。${m.repair_rule}。修复策略的财富差已扣除追加本金；行情截止 ${DATA.asof}。历史表现不代表未来收益。`;
+  $("forecast-holds").innerHTML = ADAPTIVE ? ADAPTIVE.holdings.map(h => {
+    const rows = Object.entries(h.forecast.horizons).map(([days, f]) => {
+      const wf = h.forecast.walk_forward[days];
+      const validation = wf ? `滚动命中率 ${pct(wf.direction_accuracy)} / 基准 ${pct(wf.baseline_accuracy)}` : "验证样本不足";
+      return `<li>未来 ${days} 日：<b>${esc(f.direction)}</b>；模型上涨概率 ${pct(f.probability_up)}；${validation}</li>`;
+    }).join("");
+    return `<article class="hold"><h3>${esc(h.name)} <span class="meta">${esc(h.code)}</span></h3><div class="meta">次日目标仓位</div><div class="position">${pct(h.next_session_position, 0)}</div><ol>${rows}</ol><p class="note">概率未通过滚动验证时只作研究记录，不作为交易信号。</p></article>`;
+  }).join("") : "<div class='card'>多策略结果不可用</div>";
+}
+function renderYearly() {
+  let rows;
+  if (backtestModel === "adaptive" && ADAPTIVE) rows = ADAPTIVE.yearly;
+  else rows = DATA.trend.yearly.map(r => ({year: r.year, return: r.strategy, hold_return: r.hold, excess: r.excess, maxdd: null, sharpe: null}));
+  $("yearly").innerHTML = `<thead><tr><th>年份</th><th class="num">策略</th><th class="num">持有</th><th class="num">超额</th><th class="num">最大回撤</th><th class="num">夏普</th></tr></thead><tbody>` + rows.map(r => `<tr><td>${r.year}</td><td class="num ${cls(r.return)}">${pct(r.return)}</td><td class="num ${cls(r.hold_return)}">${pct(r.hold_return)}</td><td class="num ${cls(r.excess)}">${pct(r.excess)}</td><td class="num">${pct(r.maxdd)}</td><td class="num">${num(r.sharpe)}</td></tr>`).join("") + `</tbody>`;
+}
+function renderAdaptiveCandidates() {
+  if (!ADAPTIVE) return;
+  const key = $("candidate-sort").value;
+  const rows = ADAPTIVE.candidates.slice().sort((a, b) => {
+    const av = key.startsWith("valid") ? a.valid[key.slice(6)] : a.test[key.slice(5)];
+    const bv = key.startsWith("valid") ? b.valid[key.slice(6)] : b.test[key.slice(5)];
+    return (bv ?? -999) - (av ?? -999);
+  });
+  $("selection-note").textContent = ADAPTIVE.selection.objective + "。高亮行为当前冻结策略。";
+  $("adaptive-grid").innerHTML = `<thead><tr><th>策略</th><th>类别</th><th class="num">训练收益</th><th class="num">验证收益</th><th class="num">验证夏普</th><th class="num">检验收益</th><th class="num">检验夏普</th><th class="num">检验回撤</th><th class="num">平均仓位</th><th class="num">交易数</th></tr></thead><tbody>` + rows.map(r => `<tr class="${r.name === ADAPTIVE.selected.name ? "pin" : ""}"><td>${esc(r.name)}</td><td>${esc(r.family)}</td><td class="num ${cls(r.train.return)}">${pct(r.train.return)}</td><td class="num ${cls(r.valid.return)}">${pct(r.valid.return)}</td><td class="num">${num(r.valid.sharpe)}</td><td class="num ${cls(r.test.return)}">${pct(r.test.return)}</td><td class="num">${num(r.test.sharpe)}</td><td class="num">${pct(r.test.maxdd)}</td><td class="num">${pct(r.test.exposure)}</td><td class="num">${r.test_trades.n}</td></tr>`).join("") + `</tbody>`;
+}
+function stockRows() {
+  const q = $("q").value.trim().toLowerCase(), sig = $("sig").value;
+  const rows = DATA.stocks.filter(s => {
+    if (q && !`${s.code} ${s.name} ${s.sector}`.toLowerCase().includes(q)) return false;
+    return !sig || s.trend === sig || s.repair === sig;
+  });
+  rows.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    const av = a[sortKey], bv = b[sortKey];
+    if (av === undefined || av === null) return 1;
+    if (bv === undefined || bv === null) return -1;
+    return av > bv ? sortDir : av < bv ? -sortDir : 0;
+  });
+  $("count").textContent = `${rows.length} / ${DATA.stocks.length} 只`;
+  const head = [["代码","code"],["名称","name"],["行业","sector"],["收盘","close"],["距20日线","to_ma20"],["RSI","rsi"],["5日","ret5"],["趋势","trend"],["修复","repair"],["检验策略/持有","test_excess"]];
+  $("stocks").innerHTML = `<thead><tr>${head.map((h,i) => `<th class="${i>2 ? "num" : ""}" data-k="${h[1]}">${h[0]}</th>`).join("")}</tr></thead><tbody>` + rows.map(s => `<tr class="${s.pinned ? "pin" : ""}"><td>${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.sector)}</td><td class="num">${s.close.toFixed(2)}</td><td class="num ${cls(s.to_ma20)}">${pct(s.to_ma20)}</td><td class="num">${s.rsi.toFixed(1)}</td><td class="num ${cls(s.ret5)}">${pct(s.ret5)}</td><td class="num">${esc(s.trend)}</td><td class="num">${esc(s.repair)}</td><td class="num"><span class="${cls(s.test_strategy)}">${pct(s.test_strategy)}</span> / <span class="${cls(s.test_hold)}">${pct(s.test_hold)}</span></td></tr>`).join("") + `</tbody>`;
+  document.querySelectorAll("#stocks th").forEach(th => th.onclick = () => { const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; stockRows(); });
+}
+function renderTrain() {
+  const tg = DATA.trend.grid.slice().sort((a,b) => (b.train_calmar ?? -9)-(a.train_calmar ?? -9));
+  $("trend-grid").innerHTML = `<thead><tr><th>均线</th><th>防守空仓</th><th class="num">训练回撤比</th><th class="num">验证超额</th><th class="num">检验收益</th><th class="num">检验超额</th><th class="num">检验回撤</th><th>选用</th></tr></thead><tbody>` + tg.map(r => `<tr class="${r.selected ? "pin" : ""}"><td>${r.ma}</td><td>${r.gate ? "是" : "否"}</td><td class="num">${num(r.train_calmar, 3)}</td><td class="num ${cls(r.valid_excess)}">${pct(r.valid_excess)}</td><td class="num ${cls(r.test_return)}">${pct(r.test_return)}</td><td class="num ${cls(r.test_excess)}">${pct(r.test_excess)}</td><td class="num">${pct(r.test_maxdd)}</td><td>${r.selected ? "冻结" : ""}</td></tr>`).join("") + `</tbody>`;
+  const c = DATA.repair.counts;
+  $("repair-counts").textContent = `深跌样本：训练 ${c.train} 次，验证 ${c.valid} 次，检验 ${c.test} 次。选用条件是验证期扣除追加本金后的财富中位数高于持有，且回本率不比持有低过 2 个百分点。`;
+  const rg = DATA.repair.grid.slice().sort((a,b) => (b.train_lift ?? -9)-(a.train_lift ?? -9));
+  $("repair-grid").innerHTML = `<thead><tr><th>反弹</th><th>回落</th><th>RSI</th><th>加仓</th><th class="num">训练财富差</th><th class="num">验证财富差</th><th class="num">验证回本率</th><th class="num">持有回本率</th><th class="num">检验回本率</th><th class="num">检验财富差</th><th>选用</th></tr></thead><tbody>` + rg.map(r => `<tr class="${r.selected ? "pin" : ""}"><td>${Math.round(r.bounce*100)}%</td><td>${Math.round(r.dip*100)}%</td><td>${r.rsi_sell}</td><td>${r.enable_add ? "允许" : "关闭"}</td><td class="num ${cls(r.train_lift)}">${pct(r.train_lift)}</td><td class="num ${cls(r.valid_lift)}">${pct(r.valid_lift)}</td><td class="num">${pct(r.valid_recover)}</td><td class="num">${pct(r.valid_hold_recover)}</td><td class="num">${pct(r.test_recover)}</td><td class="num ${cls(r.test_lift)}">${pct(r.test_lift)}</td><td>${r.selected ? "冻结" : ""}</td></tr>`).join("") + `</tbody>`;
+}
+function show(name) {
+  views.forEach(v => { $("view-"+v).classList.toggle("active", v === name); $("tab-"+v).classList.toggle("active", v === name); });
+  if (name === "backtest") { drawBacktest(); renderYearly(); renderAdaptiveCandidates(); }
+}
+views.forEach(v => $("tab-"+v).onclick = () => show(v));
+document.querySelectorAll("[data-slice]").forEach(btn => btn.onclick = () => { slice = btn.dataset.slice; drawBacktest(); });
+document.querySelectorAll("[data-model]").forEach(btn => btn.onclick = () => { backtestModel = btn.dataset.model; drawBacktest(); renderYearly(); });
+$("q").oninput = stockRows;
+$("sig").onchange = stockRows;
+$("candidate-sort").onchange = renderAdaptiveCandidates;
+
+Promise.all([
+  fetch("results.json").then(r => { if (!r.ok) throw new Error("results"); return r.json(); }),
+  fetch("adaptive_results.json").then(r => { if (!r.ok) throw new Error("adaptive"); return r.json(); }).catch(() => null),
+]).then(([data, adaptive]) => {
+  DATA = data; ADAPTIVE = adaptive;
+  const mkt = data.market, cov = data.coverage;
+  const covText = cov ? `${cov.n} 只股票 · ${cov.n_from_2015} 只含 2015 年行情` : `${data.universe} 只股票`;
+  $("subtitle").textContent = `${data.asof} 收盘 · 沪深300 ${mkt.close}（${mkt.regime}，RSI ${mkt.rsi}）· 创业板 ${mkt.cyb} · ${covText}`;
+  $("generated").textContent = `多策略更新 ${adaptive ? adaptive.generated : "不可用"}`;
+  renderAdaptiveOverview(); renderOverview(); renderYearly(); stockRows(); renderTrain(); renderAdaptiveCandidates(); drawBacktest();
+}).catch(() => { $("subtitle").textContent = "没有读到 results.json，请先运行 build_platform.py。"; });
+</script>
+</body>
+</html>

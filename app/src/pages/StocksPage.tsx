@@ -11,6 +11,7 @@ import { StockAgentPanel } from "@/components/stock/StockAgentPanel";
 import { StockQuantPanel } from "@/components/stock/StockQuantPanel";
 import { IndexPicker } from "@/components/stock/IndexPicker";
 import { StockSearch } from "@/components/stock/StockSearch";
+import { StrategyPlatform } from "@/components/stock/StrategyPlatform";
 import type { KlinePeriod, RankKind } from "@/types";
 
 const PERIODS: { value: KlinePeriod; label: string }[] = [
@@ -35,6 +36,7 @@ const RANKS: { value: RankKind; label: string }[] = [
 
 export default function StocksPage() {
   const s = useStocks();
+  const [view, setView] = useState<"market" | "strategy">("market");
   const [rankKind, setRankKind] = useState<RankKind>("gainers");
   const [rightTab, setRightTab] = useState<"market" | "agent" | "quant">("market");
 
@@ -70,6 +72,8 @@ export default function StocksPage() {
           <p className="text-[0.6875rem] text-muted-foreground">实时行情 · K线 · 技术分析</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" variant={view === "market" ? "secondary" : "ghost"} onClick={() => setView("market")}>行情看板</Button>
+          <Button size="sm" variant={view === "strategy" ? "secondary" : "ghost"} onClick={() => setView("strategy")}>策略验证</Button>
           <IndexPicker
             selected={s.indexCodes}
             onSaved={() => {
@@ -83,6 +87,10 @@ export default function StocksPage() {
         </div>
       </header>
 
+      <div className={view === "strategy" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+        <StrategyPlatform onOpenStock={() => setView("market")} />
+      </div>
+      <div className={view === "market" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
       <IndexTicker indices={s.indices} />
       <StatusBar error={s.error} loading={s.loading} onRefresh={() => void s.refreshAll()} />
 
@@ -205,6 +213,7 @@ export default function StocksPage() {
             </div>
           )}
         </aside>
+      </div>
       </div>
     </div>
   );

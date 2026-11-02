@@ -1,0 +1,8 @@
+__pycache__/
+data/
+platform/logs/
+platform/daily_review_history.jsonl
+platform/prediction_ledger.json
+platform/swing_prediction_ledger.json
+snapshot.json
+platform/swing_smoke.json

@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 export const tauri = {
+  stockSwingReview(codes: string[]) { return invoke<import("./swingPlan").SwingReview>("stock_swing_review", { codes }); },
+  strategySnapshot() { return invoke<import("./strategyPlatform").StrategySnapshot>("strategy_snapshot"); },
+  strategyReview() { return invoke<import("./strategyPlatform").StrategySnapshot>("strategy_review"); },
   ping(): Promise<string> { return invoke<string>("ping"); },
   dailyTravel(date: string, force = false, days = 3) { return invoke<import("@/types").DailyTravel>("daily_travel", { date, force, days }); },
   listCategories() { return invoke<import("@/types").Category[]>("list_categories"); },
