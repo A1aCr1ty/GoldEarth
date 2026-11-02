@@ -124,6 +124,7 @@ fn main() {
             "stock_trends",
             "market_rankings",
             "stock_fund_flow",
+            "stock_financial_reports",
             "get_watchlist",
             "save_watchlist",
             "seed_watchlist",

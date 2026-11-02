@@ -1,6 +1,6 @@
 import type { StrategySnapshot } from './strategyPlatform';
 import { fusionOf } from './fusionStrategy';
-export function strategyAdvice(snapshot: StrategySnapshot | null, code: string, quantity: number, today = new Date().toISOString().slice(0,10)) {
+export function strategyAdvice(snapshot: StrategySnapshot | null, code: string, quantity: number, today = new Date().toISOString().slice(0,10)): { action: 'wait' | 'reduce' | 'hold' | 'buy'; summary: string; asof?: string } {
   const a = snapshot?.adaptive;
   const fusion = fusionOf(a);
   const combined = fusion?.operations.find(s => s.code === code.replace(/^(sh|sz|bj)/, ''));

@@ -16,6 +16,7 @@ import { MarkdownView } from "@/components/markdown/MarkdownView";
 import { useAgents } from "@/store/agents";
 import { useStocks } from "@/store/stocks";
 import { buildMarketContext } from "@/lib/marketContext";
+import { analyzeFundamentals, buildFinancialContext, latestFinancialReport } from "@/lib/fundamental";
 import { tauri } from "@/lib/tauri";
 
 /** 常用分析请求，点一下填进输入框 */
@@ -122,7 +123,11 @@ export function StockAgentPanel() {
             bars = [];
           }
         }
-        context = buildMarketContext(detail, bars, trend, flow);
+        const financial = await tauri.stockFinancialReports(current).catch(() => null);
+        const latest = latestFinancialReport(financial);
+        const analysis = latest ? analyzeFundamentals(latest) : null;
+        const financialContext = buildFinancialContext(financial, analysis);
+        context = [buildMarketContext(detail, bars, trend, flow), financialContext].filter(Boolean).join("\n\n");
       }
       const run = await runAgent(agentId, text, sessionId ?? undefined, undefined, context, current);
       setActiveRunId(run.id);

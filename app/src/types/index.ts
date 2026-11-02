@@ -269,6 +269,48 @@ export interface FundFlow {
   small: FundTier;
 }
 
+export interface FinancialReport {
+  code: StockCode;
+  name: string;
+  orgType: string;
+  reportDate: string;
+  reportDateName: string;
+  reportType: string;
+  noticeDate: string;
+  currency: string;
+  revenue: number | null;
+  netProfit: number | null;
+  deductedNetProfit: number | null;
+  operatingCashFlow: number | null;
+  revenueYoy: number | null;
+  netProfitYoy: number | null;
+  deductedNetProfitYoy: number | null;
+  quarterRevenueYoy: number | null;
+  quarterNetProfitYoy: number | null;
+  eps: number | null;
+  bps: number | null;
+  roeWeighted: number | null;
+  grossMargin: number | null;
+  netMargin: number | null;
+  debtRatio: number | null;
+  currentRatio: number | null;
+  quickRatio: number | null;
+  totalAssets: number | null;
+  totalEquity: number | null;
+}
+
+export interface FinancialReports {
+  code: StockCode;
+  name: string;
+  source: string;
+  sourceUrl: string;
+  reportUrl: string;
+  updatedAt: string;
+  fromCache: boolean;
+  warning: string | null;
+  reports: FinancialReport[];
+}
+
 export interface WatchItem {
   code: StockCode;
   name: string;

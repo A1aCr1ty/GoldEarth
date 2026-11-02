@@ -126,6 +126,7 @@ pub fn run() {
             commands::market::stock_trends,
             commands::market::market_rankings,
             commands::market::stock_fund_flow,
+            commands::market::stock_financial_reports,
             commands::market::get_watchlist,
             commands::market::save_watchlist,
             commands::market::seed_watchlist,

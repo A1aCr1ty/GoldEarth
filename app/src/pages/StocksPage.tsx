@@ -9,6 +9,7 @@ import { KlineChart, type SubIndicator } from "@/components/stock/KlineChart";
 import { TimeChart } from "@/components/stock/TimeChart";
 import { StockAgentPanel } from "@/components/stock/StockAgentPanel";
 import { StockQuantPanel } from "@/components/stock/StockQuantPanel";
+import { StockFundamentalPanel } from "@/components/stock/StockFundamentalPanel";
 import { IndexPicker } from "@/components/stock/IndexPicker";
 import { StockSearch } from "@/components/stock/StockSearch";
 import { StrategyPlatform } from "@/components/stock/StrategyPlatform";
@@ -36,7 +37,7 @@ const RANKS: { value: RankKind; label: string }[] = [
 
 export default function StocksPage() {
   const s = useStocks();
-  const [view, setView] = useState<"market" | "strategy">("market");
+  const [view, setView] = useState<"market" | "fundamental" | "strategy">("market");
   const [rankKind, setRankKind] = useState<RankKind>("gainers");
   const [rightTab, setRightTab] = useState<"market" | "agent" | "quant">("market");
 
@@ -69,10 +70,11 @@ export default function StocksPage() {
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
         <div className="min-w-0">
           <h1 className="text-base font-semibold">股票看板</h1>
-          <p className="text-[0.6875rem] text-muted-foreground">实时行情 · K线 · 技术分析</p>
+          <p className="text-[0.6875rem] text-muted-foreground">实时行情 · K线 · 财报 · 基本面与模型分析</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <Button size="sm" variant={view === "market" ? "secondary" : "ghost"} onClick={() => setView("market")}>行情看板</Button>
+          <Button size="sm" variant={view === "fundamental" ? "secondary" : "ghost"} onClick={() => setView("fundamental")}>财报分析</Button>
           <Button size="sm" variant={view === "strategy" ? "secondary" : "ghost"} onClick={() => setView("strategy")}>策略验证</Button>
           <IndexPicker
             selected={s.indexCodes}
@@ -87,6 +89,9 @@ export default function StocksPage() {
         </div>
       </header>
 
+      <div className={view === "fundamental" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+        <StockFundamentalPanel onAskAgent={() => { setView("market"); setRightTab("agent"); }} />
+      </div>
       <div className={view === "strategy" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <StrategyPlatform onOpenStock={() => setView("market")} />
       </div>

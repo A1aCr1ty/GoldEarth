@@ -56,6 +56,6 @@ function QuantForStock({ code }: { code: string }) {
       <p className="text-[11px] text-muted-foreground">视频未明确各次减仓比例按原始还是剩余仓位计算；这里只提示阶段，不计算下单股数。请结合已完成的减仓记录，避免重复减仓。除权、分红后请更新成本。</p>
     </section>
     <details className="space-y-2" open><summary className="cursor-pointer font-medium">视频出处与核实范围</summary>{QUANT_SOURCES.map(s => <div key={s.url} className="space-y-1 py-1"><button className="text-left text-primary hover:underline" onClick={() => { void tauri.openReader(s.url,s.title).catch(e => setError(String(e))); }}>{s.title} ↗</button><p className="text-[11px] text-muted-foreground">{s.status}</p></div>)}<p className="text-[11px] text-muted-foreground">来源：杉门tepu大弟子（直播切片整理账号）。自动字幕可能有误；已排除不明确或主题不符的规则。</p></details>
-    <p className="border-t pt-3 text-[11px] text-muted-foreground">仅作研究与交易计划参考，不自动下单。未纳入基本面、行业比较与交易成本回测；执行前需核对实时价格、停牌、涨跌停和可卖数量。数据仅在进入此面板或点击刷新时更新。</p>
+    <p className="border-t pt-3 text-[11px] text-muted-foreground">仅作研究与交易计划参考，不自动下单。本面板不纳入基本面、行业比较与交易成本回测；财报分析请查看「财报分析」页。执行前需核对实时价格、停牌、涨跌停和可卖数量。数据仅在进入此面板或点击刷新时更新。</p>
   </div>;
 }

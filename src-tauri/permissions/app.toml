@@ -106,6 +106,7 @@ commands.allow = [
   "show_xianyu_window",
   "show_trending_source",
   "stock_fund_flow",
+  "stock_financial_reports",
   "stock_kline",
   "stock_quote",
   "stock_quotes",

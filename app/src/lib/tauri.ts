@@ -61,6 +61,7 @@ export const tauri = {
   stockTrends(code: string) { return invoke<import("@/types").Trend>("stock_trends", { code }); },
   marketRankings(kind: import("@/types").RankKind, limit?: number) { return invoke<import("@/types").RankItem[]>("market_rankings", { kind, limit: limit ?? 20 }); },
   stockFundFlow(code: string) { return invoke<import("@/types").FundFlow>("stock_fund_flow", { code }); },
+  stockFinancialReports(code: string, force = false) { return invoke<import("@/types").FinancialReports>("stock_financial_reports", { code, force }); },
   getWatchlist() { return invoke<import("@/types").WatchItem[]>("get_watchlist"); },
   searchStocks(query: string) { return invoke<import("@/types").StockSuggestion[]>("search_stocks", { query }); },
   saveWatchlist(items: import("@/types").WatchItem[]) { return invoke<import("@/types").WatchItem[]>("save_watchlist", { items }); },

@@ -103,6 +103,15 @@ pub async fn stock_fund_flow(code: String) -> Result<market::types::FundFlow, St
     market::fund_flow(&code).await
 }
 
+/// 最近定期报告的主要财务指标。force 只绕过新鲜缓存，失败时仍可回退旧缓存。
+#[tauri::command]
+pub async fn stock_financial_reports(
+    code: String,
+    force: Option<bool>,
+) -> Result<market::financials::FinancialReports, String> {
+    market::financials::financial_reports(&code, force.unwrap_or(false)).await
+}
+
 /// 自选股条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
