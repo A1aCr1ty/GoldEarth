@@ -49,3 +49,21 @@ assert.equal(run("xianyu", "pocket 3", "SUCCESS::调用成功", raw).items.lengt
 assert.equal(run("xianyu", "pocket 3", "SUCCESS::调用成功", '{"data":{"recommendations":[{"price":3}]}}').items.length, 0);
 assert.equal(run("jd", "pocket 3").status, "restricted");
 console.log("通过：国内整机型号、主售价、成色、去重、套装/配件/租赁/分期/已售过滤，以及闲鱼推荐隔离与京东登录跳转。");
+
+// New marketplace adapters must reject sold items, promotional prices and foreign links.
+for (const provider of ['suning', 'taobao']) {
+  const host = provider === 'suning' ? 'product.suning.com' : 'item.taobao.com';
+  const href = provider === 'suning' ? `https://${host}/007/123.html` : `https://${host}/item.htm?id=123`;
+  function listing(title, price, url = href, text = '') {
+    return { innerText: text, querySelector(selector) {
+      if (selector.includes('price')) return { textContent: price };
+      if (selector.includes('Title')) return { textContent: title };
+      return { textContent: title, href: url };
+    } };
+  }
+  const entries = [listing('二手 iPhone 15 99新', '￥2000'), listing('二手 iPhone 15 99新', '￥2000', href + (href.includes('?') ? '&' : '?') + 'tracking=1'), listing('二手 iPhone 15', '￥100', href, '券后'), listing('二手 iPhone 15', '￥100', href, '已售'), listing('二手 iPhone 15', '100×24'), listing('全新 iPhone 15', '5000'), listing('二手 iPhone 15', '1000', 'https://evil.example/item.htm?id=1')];
+  const result = vm.runInNewContext(script.replace('__INPUT_JSON__', JSON.stringify({provider, keyword: 'iPhone 15'})), { document: {title: '搜索', body: {innerText: '请登录'}, querySelectorAll: () => entries}, location: {href: `https://${host}/`}, URL });
+  assert.equal(result.items.length, 1, provider + ' must keep only one verified listing');
+  assert.equal(result.items[0].price, 2000);
+}
+console.log('通过：苏宁与淘宝的二手限定、已售/优惠/分期/外链过滤，以及追踪参数去重。');

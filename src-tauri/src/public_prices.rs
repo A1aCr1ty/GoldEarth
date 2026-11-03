@@ -70,6 +70,8 @@ enum Provider {
     Nine,
     Xianyu,
     Jd,
+    Suning,
+    Taobao,
 }
 impl Provider {
     fn id(self) -> &'static str {
@@ -78,6 +80,8 @@ impl Provider {
             Self::Nine => "nine",
             Self::Xianyu => "xianyu",
             Self::Jd => "jd",
+            Self::Suning => "suning",
+            Self::Taobao => "taobao",
         }
     }
     fn name(self) -> &'static str {
@@ -86,6 +90,8 @@ impl Provider {
             Self::Nine => "九机良品",
             Self::Xianyu => "闲鱼",
             Self::Jd => "京东二手",
+            Self::Suning => "苏宁二手",
+            Self::Taobao => "淘宝二手",
         }
     }
     fn host(self) -> &'static str {
@@ -94,6 +100,8 @@ impl Provider {
             Self::Nine => "m2.9ji.com",
             Self::Xianyu => "www.goofish.com",
             Self::Jd => "search.jd.com",
+            Self::Suning => "search.suning.com",
+            Self::Taobao => "s.taobao.com",
         }
     }
     fn search(self, keyword: &str) -> reqwest::Url {
@@ -105,14 +113,20 @@ impl Provider {
             Self::Nine => ("https://m2.9ji.com/search", "keyword"),
             Self::Xianyu => ("https://www.goofish.com/search", "q"),
             Self::Jd => ("https://search.jd.com/Search", "keyword"),
+            Self::Suning => ("https://search.suning.com/", "keyword"),
+            Self::Taobao => ("https://s.taobao.com/search", "q"),
         };
         let mut url = reqwest::Url::parse(base).unwrap();
-        let query = if matches!(self, Self::Jd) {
+        let query = if matches!(self, Self::Jd | Self::Suning | Self::Taobao) {
             format!("{keyword} 二手")
         } else {
             keyword.into()
         };
-        url.query_pairs_mut().append_pair(key, &query);
+        if matches!(self, Self::Suning) {
+            url.set_path(&format!("{query}/"));
+        } else {
+            url.query_pairs_mut().append_pair(key, &query);
+        }
         if matches!(self, Self::Nine) {
             url.query_pairs_mut().append_pair("searchType", "3");
         }
@@ -191,6 +205,18 @@ fn valid_listings(items: Vec<Listing>, provider: Provider) -> Vec<Listing> {
                                 && u.path() == "/item"
                                 && u.query_pairs().any(|(k, v)| k == "id" && !v.is_empty())
                         }
+                        Provider::Suning => {
+                            u.host_str() == Some("product.suning.com")
+                                && u.path().ends_with(".html")
+                        }
+                        Provider::Taobao => {
+                            matches!(u.host_str(), Some("item.taobao.com" | "detail.tmall.com"))
+                                && u.query_pairs().any(|(k, v)| {
+                                    k == "id"
+                                        && v.chars().all(|c| c.is_ascii_digit())
+                                        && !v.is_empty()
+                                })
+                        }
                         Provider::Jd => u.host_str() == Some("item.jd.com") && u.path() != "/",
                     }
             });
@@ -202,6 +228,7 @@ fn valid_listings(items: Vec<Listing>, provider: Provider) -> Vec<Listing> {
                 && valid_url
                 && seen.insert(item.url.clone())
         })
+        .take(100)
         .collect()
 }
 fn median(values: &[f64]) -> Option<f64> {
@@ -275,18 +302,22 @@ async fn collect(
         let deadline = tokio::time::Instant::now() + Duration::from_secs(18);
         let mut items = Vec::new();
         let mut detail = String::new();
+        let mut rounds = 0;
         loop {
             match snapshot(&w, provider, &keyword).await {
                 Ok(page) if is_current_page(&page.page_url, provider, &keyword, &request) => {
                     detail = format!("{}：未取得匹配的公开在售样本", page.page_title);
                     if page.ready {
-                        items = valid_listings(page.items, provider);
+                        items.extend(valid_listings(page.items, provider));
+                        items = valid_listings(items, provider);
                         if !page.message.is_empty() {
                             detail = page.message;
                         }
-                        if items.len() >= 3 || page.status == "restricted" {
+                        if items.len() >= 100 || rounds >= 8 || page.status == "restricted" {
                             break;
                         }
+                        rounds += 1;
+                        let _ = w.eval("window.scrollTo(0, document.documentElement.scrollHeight)");
                     }
                 }
                 Ok(_) => {}
@@ -404,7 +435,11 @@ async fn collect_zhuanzhuan(
         };
         let configuration = zhuanzhuan_configuration(&first.title);
         // 同款卡片没有完整配置：逐页核对型号、内存、容量、版本；颜色保留在样本中。
-        for raw in seed.related_urls.into_iter().take(4) {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
+        for raw in seed.related_urls.into_iter().take(12) {
+            if tokio::time::Instant::now() >= deadline {
+                break;
+            }
             let Some(url) = zhuanzhuan_url(&raw) else {
                 continue;
             };
@@ -485,10 +520,12 @@ pub async fn fetch_public_price(
         &target.keyword
     });
     let _guard = LOCK.lock().await;
-    let (nine, xy, jd, zz) = tokio::join!(
+    let (nine, xy, jd, suning, taobao, zz) = tokio::join!(
         collect(app.clone(), Provider::Nine, query.clone()),
         collect(app.clone(), Provider::Xianyu, query.clone()),
         collect(app.clone(), Provider::Jd, query.clone()),
+        collect(app.clone(), Provider::Suning, query.clone()),
+        collect(app.clone(), Provider::Taobao, query.clone()),
         collect_zhuanzhuan(app, query.clone(), target.zhuanzhuan_url)
     );
     let mut sources = vec![
@@ -496,6 +533,8 @@ pub async fn fetch_public_price(
         nine.0,
         xy.0,
         jd.0,
+        suning.0,
+        taobao.0,
         unavailable(
             "zhaoliangji",
             "找靓机（转转旗下）",
@@ -508,6 +547,8 @@ pub async fn fetch_public_price(
         .into_iter()
         .chain(xy.1)
         .chain(jd.1)
+        .chain(suning.1)
+        .chain(taobao.1)
         .chain(zz.1)
         .collect();
     let (avg, ids) = reference(&sources);
@@ -607,6 +648,50 @@ mod tests {
             "pocket 3",
             "old"
         ));
+    }
+    #[test]
+    fn new_marketplaces_keep_query_identity_and_reject_foreign_links() {
+        for provider in [Provider::Suning, Provider::Taobao] {
+            let mut url = provider.search("iPhone 15");
+            url.query_pairs_mut().append_pair("_ge_probe", "current");
+            assert!(is_current_page(
+                url.as_str(),
+                provider,
+                "iPhone 15",
+                "current"
+            ));
+            assert!(!is_current_page(
+                url.as_str(),
+                provider,
+                "iPhone 16",
+                "current"
+            ));
+            let good = if matches!(provider, Provider::Suning) {
+                "https://product.suning.com/007/123.html"
+            } else {
+                "https://item.taobao.com/item.htm?id=123"
+            };
+            let row = |url: &str| Listing {
+                title: "二手 iPhone 15".into(),
+                price: 2000.0,
+                currency: "CNY".into(),
+                url: url.into(),
+                source: provider.id().into(),
+                condition: "99新".into(),
+            };
+            assert_eq!(
+                valid_listings(
+                    vec![
+                        row(good),
+                        row(good),
+                        row("https://evil.example/123.html?id=123")
+                    ],
+                    provider
+                )
+                .len(),
+                1
+            );
+        }
     }
     #[test]
     fn only_cny_and_trusted_domestic_listing_urls_are_accepted() {

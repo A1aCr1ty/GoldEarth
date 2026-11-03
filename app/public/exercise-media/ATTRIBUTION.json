@@ -1,0 +1,345 @@
+{
+  "source": "https://github.com/yuhonas/free-exercise-db",
+  "revision": "f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5",
+  "retrieved": "2026-11-03",
+  "license": "Unlicense (as declared by the upstream repository)",
+  "licenseUrl": "https://github.com/yuhonas/free-exercise-db/blob/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/LICENSE.md",
+  "changes": "Original JPEGs, unmodified. Selected frames only; Chinese captions and variant notes are GoldEarth additions.",
+  "files": [
+    {
+      "path": "Bench_Dips/0.jpg",
+      "sha256": "82b17762ad761df959b69cb6d46239ee82f24d666de4719dfd2bc9ba0ca1d528",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bench_Dips/0.jpg"
+    },
+    {
+      "path": "Bench_Dips/1.jpg",
+      "sha256": "d34b8ba2e2c45eca8ab77b514bc156b436b220e8c3fc414ae0ea48ccb1cf6fa0",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bench_Dips/1.jpg"
+    },
+    {
+      "path": "Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench/0.jpg",
+      "sha256": "96474831b0193198bc920d9035596805495485e79ae9b6e68e476bedd5a24ca4",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench/0.jpg"
+    },
+    {
+      "path": "Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench/1.jpg",
+      "sha256": "8bbea1e8187d0296fe3b46523e7cb8773dc2421eb19cecb609b6d03e8687b29f",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench/1.jpg"
+    },
+    {
+      "path": "Bent_Over_Two-Dumbbell_Row/0.jpg",
+      "sha256": "d691ee3c8d84dd4a7211081dd5c7d4f7c8f016ab764a3b80fd6712c0f523c9da",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bent_Over_Two-Dumbbell_Row/0.jpg"
+    },
+    {
+      "path": "Bent_Over_Two-Dumbbell_Row/1.jpg",
+      "sha256": "f38f85fc5b9fc401fd4963bb760464c45d8087bebb6afe69eaed57bfa6c51693",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bent_Over_Two-Dumbbell_Row/1.jpg"
+    },
+    {
+      "path": "Bodyweight_Squat/0.jpg",
+      "sha256": "85715b9b75afe568ef7cb1863005be532a2457bf7e340802da0cd5cc06914b62",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bodyweight_Squat/0.jpg"
+    },
+    {
+      "path": "Bodyweight_Squat/1.jpg",
+      "sha256": "3fa6886632674f02308cdee53ce32649fd648774701fbd20ee280d63be40e5a4",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bodyweight_Squat/1.jpg"
+    },
+    {
+      "path": "Bodyweight_Walking_Lunge/0.jpg",
+      "sha256": "42421cd13040cc61a810d591af1b9fd85648063098057a8275b6451c73f74c6d",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bodyweight_Walking_Lunge/0.jpg"
+    },
+    {
+      "path": "Bodyweight_Walking_Lunge/1.jpg",
+      "sha256": "0d1273e80ffb41c2dade4721b8b1721e3e269b28e7824a526543670021499a74",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Bodyweight_Walking_Lunge/1.jpg"
+    },
+    {
+      "path": "Butt_Lift_Bridge/0.jpg",
+      "sha256": "f74f6813fc43cd5f60e6779ec182049a2ddb3ed9dc5777389dd4ab1880392d5c",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Butt_Lift_Bridge/0.jpg"
+    },
+    {
+      "path": "Butt_Lift_Bridge/1.jpg",
+      "sha256": "3eacd0851b56e3e1ea29a0a73c596b0d10e4bc746dd64afaed50d7255eae0819",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Butt_Lift_Bridge/1.jpg"
+    },
+    {
+      "path": "Calf_Raise_On_A_Dumbbell/0.jpg",
+      "sha256": "a239b8aff5b4f11c1d7e65cb3244154967390ce35fc38ad1fb38e09056ae49e7",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Calf_Raise_On_A_Dumbbell/0.jpg"
+    },
+    {
+      "path": "Calf_Raise_On_A_Dumbbell/1.jpg",
+      "sha256": "c75b9604194a223de18f06c464074bbfce6b1ce3d88a5b5045e3cd4582d4d7a9",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Calf_Raise_On_A_Dumbbell/1.jpg"
+    },
+    {
+      "path": "Crunches/0.jpg",
+      "sha256": "8b424d42b3196b9b6fdd70c86db60ba6fdae7a337710e8c01c278a6ea5c4220a",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Crunches/0.jpg"
+    },
+    {
+      "path": "Crunches/1.jpg",
+      "sha256": "84df8957fcc20c051475a2d28fedb0c1a3b3e63b00913ae4acec1ed0dc150d22",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Crunches/1.jpg"
+    },
+    {
+      "path": "Dead_Bug/0.jpg",
+      "sha256": "8b4e3e357c201d3752ce4fe97a0f1d00b00e7479cd702f8846791fdf5df66220",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dead_Bug/0.jpg"
+    },
+    {
+      "path": "Dead_Bug/1.jpg",
+      "sha256": "8de0d54e4c41433b809b045a82832c6632c35102bee945cd3caf522f054d6730",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dead_Bug/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Bench_Press/0.jpg",
+      "sha256": "06494fc5d679283ad7de10fd60149e543396bbd9ba65b0821937de317ce9e001",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Bench_Press/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Bench_Press/1.jpg",
+      "sha256": "29ce1d1335b10ae5e92b208c512f4f562493379a9c49bafb249f945c5b702299",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Bench_Press/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Bicep_Curl/0.jpg",
+      "sha256": "fad8458c2f70c39e1abb0a9554bba280da5abf9f8dc2d76f7c0be44ffdbfc99b",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Bicep_Curl/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Bicep_Curl/1.jpg",
+      "sha256": "ec2c3a539aa80ea911a85e00ca9fb74502407e8ef0d8a4526e3b076a5a52b30a",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Bicep_Curl/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Floor_Press/0.jpg",
+      "sha256": "799011d03523a432887b5d2b22fcde105144d0ff7449c6d6a664dad67508d51e",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Floor_Press/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Floor_Press/1.jpg",
+      "sha256": "9e690edf87679f71e20d94bfa22fa6a48147197f5ac6ed18ebca2bc8eca754df",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Floor_Press/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Flyes/0.jpg",
+      "sha256": "215bef04ad13e1629033f6d7333aeb6c66e9174b8fd13ece559e22aa351448f4",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Flyes/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Flyes/1.jpg",
+      "sha256": "009abc57d77c47eb29fb8f92aeb170d4005d1e9ded5f619dd6ba8fb912d1af8b",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Flyes/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Shoulder_Press/0.jpg",
+      "sha256": "e0a775bfa0b32b63c84f19fba2b1a05db535bde849feb3e54a3479a943b3bed6",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Shoulder_Press/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Shoulder_Press/1.jpg",
+      "sha256": "940d5aad6b85960e833f88e218de8ce4f806d84cf2764741f1cbff9cce365d84",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Shoulder_Press/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Shrug/0.jpg",
+      "sha256": "c3ab8024bdb710e8d4798f03ce15b5eba02e2e670797d61a09dc9b3e2f7c817b",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Shrug/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Shrug/1.jpg",
+      "sha256": "5ca8b29dd52214250c26ebfddab5bf25b5d0af3c0eede92d46e02e32684dc824",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Shrug/1.jpg"
+    },
+    {
+      "path": "Dumbbell_Step_Ups/0.jpg",
+      "sha256": "581f4f8eb98680a738ec97c1b9666fd2dac04d6a68a456632aaf1accbaa88118",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Step_Ups/0.jpg"
+    },
+    {
+      "path": "Dumbbell_Step_Ups/1.jpg",
+      "sha256": "8fd899686805d4165937628846ebf2a6499ea1636623579d8e88234b4a1aa64c",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Dumbbell_Step_Ups/1.jpg"
+    },
+    {
+      "path": "Front_Dumbbell_Raise/0.jpg",
+      "sha256": "0b12ff0413688bed00bc39c2e7af118c6cf13877f1eb49983a961a64ae487a6b",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Front_Dumbbell_Raise/0.jpg"
+    },
+    {
+      "path": "Front_Dumbbell_Raise/1.jpg",
+      "sha256": "17e600ed721cc2a6c20c5d5e43a00b2959661574ab84afa4db655891d36736dc",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Front_Dumbbell_Raise/1.jpg"
+    },
+    {
+      "path": "Glute_Kickback/0.jpg",
+      "sha256": "e0a72e4dbcc763adba600044ae94060c92798684ac51924ab485398664ce5a1e",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Glute_Kickback/0.jpg"
+    },
+    {
+      "path": "Glute_Kickback/1.jpg",
+      "sha256": "daae648a3c6f51d1d1c497694cb7280d6b2b7ed8c1b34287c6663362873659cb",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Glute_Kickback/1.jpg"
+    },
+    {
+      "path": "Goblet_Squat/0.jpg",
+      "sha256": "342ea87afb9fa03d9b1ac9c28c269f9ad2536d40b5a73b0bfb1ea25c9d605d02",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Goblet_Squat/0.jpg"
+    },
+    {
+      "path": "Goblet_Squat/1.jpg",
+      "sha256": "49d5facb019c3be9302134edf1e4b786cc88fbe25413ee7ba3e8d278952ded85",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Goblet_Squat/1.jpg"
+    },
+    {
+      "path": "Hammer_Curls/0.jpg",
+      "sha256": "f3c330d75545bed1cc325a4abf84940109db64fa5ab967b1963ecccccd3b2fe8",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Hammer_Curls/0.jpg"
+    },
+    {
+      "path": "Hammer_Curls/1.jpg",
+      "sha256": "42adf0d1577528fdfab45b360918320394a5017b082d2502ab3a00600622907e",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Hammer_Curls/1.jpg"
+    },
+    {
+      "path": "Incline_Push-Up/0.jpg",
+      "sha256": "07a34cfa5ba05bd7d87f00531ccec45a7db5e9412eafd49fe269cfe4e4bb03e9",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Incline_Push-Up/0.jpg"
+    },
+    {
+      "path": "Incline_Push-Up/1.jpg",
+      "sha256": "3f9119875b57305c7e932fe9d222c5568def33da1bd38df7d5aa982c27e24541",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Incline_Push-Up/1.jpg"
+    },
+    {
+      "path": "One-Arm_Dumbbell_Row/0.jpg",
+      "sha256": "04b2f49e6ba0c2fce5f566fe53d03571715fa58350a2b8558b3dfa9110093a53",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/One-Arm_Dumbbell_Row/0.jpg"
+    },
+    {
+      "path": "One-Arm_Dumbbell_Row/1.jpg",
+      "sha256": "83d5ceaa6d9ec6732f0afedaaa9a842c34cfdedce89e6fed75681c0bf971174a",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/One-Arm_Dumbbell_Row/1.jpg"
+    },
+    {
+      "path": "Plank/0.jpg",
+      "sha256": "7a6545152b4c918a84b7e0fd2c3c7d10d571f8fbda8e4459354eb24059ff245d",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Plank/0.jpg"
+    },
+    {
+      "path": "Plank/1.jpg",
+      "sha256": "7f6b690f7594dfab002fb27d36f8247957171b08d19020f24208afd4d5186043",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Plank/1.jpg"
+    },
+    {
+      "path": "Pullups/0.jpg",
+      "sha256": "e56c8c43a41cfe2489dcfffc2c8195fd9e8897ba25165dbc34a4154ed6df5c7a",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Pullups/0.jpg"
+    },
+    {
+      "path": "Pullups/1.jpg",
+      "sha256": "40549a52b064e5084a85e2c36afb51438df6ac1097169379a05f21565f8b4f3f",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Pullups/1.jpg"
+    },
+    {
+      "path": "Pushups/0.jpg",
+      "sha256": "8e6757ae0dc1d50a30f0ea67cdb330994947716a106451860cf7362bcd15f9f4",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Pushups/0.jpg"
+    },
+    {
+      "path": "Pushups/1.jpg",
+      "sha256": "e835d50facea325828d7a3700185a0d8ba9f908db3f033334f81a6f85f774f27",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Pushups/1.jpg"
+    },
+    {
+      "path": "Reverse_Crunch/0.jpg",
+      "sha256": "e75947d8504ca71723ade3f2a5c6fbfe38c358b26eee6924e98f2e023cb788cc",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Reverse_Crunch/0.jpg"
+    },
+    {
+      "path": "Reverse_Crunch/1.jpg",
+      "sha256": "c3b300e3b33f4ef187632b5c1cab492e91cbd3e879a5d3b040ce0b11dc09bb12",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Reverse_Crunch/1.jpg"
+    },
+    {
+      "path": "Side_Bridge/1.jpg",
+      "sha256": "ba9eb40f70d37af9830676643b36ddff7aeeb2ba88d76be272b4a0e697927f15",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Side_Bridge/1.jpg"
+    },
+    {
+      "path": "Side_Lateral_Raise/0.jpg",
+      "sha256": "aa1982c367ea9151ee7769ac1f9f8795209db94a6eb85f7d51a7033886fb7ebc",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Side_Lateral_Raise/0.jpg"
+    },
+    {
+      "path": "Side_Lateral_Raise/1.jpg",
+      "sha256": "9210e0fb0202c306026d45a55703aaec89b3bef7aafeb7791aa1d06adcf58ab3",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Side_Lateral_Raise/1.jpg"
+    },
+    {
+      "path": "Single_Leg_Glute_Bridge/0.jpg",
+      "sha256": "12c9bb37081512ce5c013f02e986a00153411681ca36a9f1dbeab720c6eea667",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Single_Leg_Glute_Bridge/0.jpg"
+    },
+    {
+      "path": "Single_Leg_Glute_Bridge/1.jpg",
+      "sha256": "bc3a789ff17aa09758e6f6e9594d369b83989cf145dbbce0734b772dfde81ee3",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Single_Leg_Glute_Bridge/1.jpg"
+    },
+    {
+      "path": "Split_Squat_with_Dumbbells/0.jpg",
+      "sha256": "3c5813f67aed71721eda63b2c102bd4d3e841bf6a7357c07967470bdda2d8fc8",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Split_Squat_with_Dumbbells/0.jpg"
+    },
+    {
+      "path": "Split_Squat_with_Dumbbells/1.jpg",
+      "sha256": "376ed996e650ce4d796ca75a4c0de1ec2133ecc9a3e9b7a285bdd718309e4c08",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Split_Squat_with_Dumbbells/1.jpg"
+    },
+    {
+      "path": "Stiff-Legged_Dumbbell_Deadlift/0.jpg",
+      "sha256": "02659ec9c245a9b44be7da73d19b9ea6bfc819fcdf4de3ec6fab705e45abb7ca",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Stiff-Legged_Dumbbell_Deadlift/0.jpg"
+    },
+    {
+      "path": "Stiff-Legged_Dumbbell_Deadlift/1.jpg",
+      "sha256": "4d56648788e857b4675ef398907a12a4d99c1a43240acac1d8fda1554cf119dc",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Stiff-Legged_Dumbbell_Deadlift/1.jpg"
+    },
+    {
+      "path": "Superman/0.jpg",
+      "sha256": "5c34c09703bbd0a0c9f8d4fc58c17b5b5290f5663fa651aedee8e99db2a435a7",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Superman/0.jpg"
+    },
+    {
+      "path": "Superman/1.jpg",
+      "sha256": "ad0860abb2689c2ed27af9f4cc4aa0b944dac27c6f839e93eb47067f95e81f07",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Superman/1.jpg"
+    },
+    {
+      "path": "Tricep_Dumbbell_Kickback/0.jpg",
+      "sha256": "1af9b3ac2f7a97e5c9d9fe81d8993969d41bb198c828ec58f752e14f278e4310",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Tricep_Dumbbell_Kickback/0.jpg"
+    },
+    {
+      "path": "Tricep_Dumbbell_Kickback/1.jpg",
+      "sha256": "fd3cabcb145d7e6f7cae7da1a8863390d8f10f92342939ae05bcecc7b1150e3c",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Tricep_Dumbbell_Kickback/1.jpg"
+    },
+    {
+      "path": "Walking_Treadmill/0.jpg",
+      "sha256": "e13cd5838b04f617026dd097778d0ce298356992e7f972e1d71c7bf1fe1bb4c6",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Walking_Treadmill/0.jpg"
+    },
+    {
+      "path": "Walking_Treadmill/1.jpg",
+      "sha256": "5b811c65e89b0eec47ae5006ad711b84c11e61fdbaac98334574cebe5855b025",
+      "sourceUrl": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/Walking_Treadmill/1.jpg"
+    }
+  ]
+}

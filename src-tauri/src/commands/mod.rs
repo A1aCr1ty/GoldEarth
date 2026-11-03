@@ -6,6 +6,8 @@ pub mod horoscope;
 pub mod housing;
 pub mod library;
 pub mod market;
+pub mod music;
+pub mod music_catalog;
 pub mod strategy;
 pub mod notes;
 pub mod nba;

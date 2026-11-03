@@ -8,10 +8,12 @@ export interface MusicTrack {
   size: number;
   duration: number;
   favorite: boolean;
-  blob: Blob;
+  blob: Blob | null;
+  streamUrl?: string;
+  source?: { name: string; url: string; license: string };
 }
 
-export const AUDIO_ACCEPT = ".mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.webm,.aiff,.aif";
+export const AUDIO_ACCEPT = ".mp3,.wav,.flac,.m4a,.aac,.ogg,.oga,.opus,.webm,.aiff,.aif";
 export function musicFileInfo(name: string) {
   const format = name.split(".").pop()?.toUpperCase() || "AUDIO";
   const stem = name.replace(/\.[^.]+$/, "");

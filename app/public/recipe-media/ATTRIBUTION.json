@@ -1,0 +1,77 @@
+{
+  "source": "https://commons.wikimedia.org/",
+  "retrieved": "2026-11-03",
+  "changes": "Original JPEGs, unmodified. Selected finished-dish references only. Chinese notes are GoldEarth additions.",
+  "files": [
+    {
+      "path": "1.jpg",
+      "sha256": "0d66478143941d3c0c23cf473be6a31b2f29989fc6972ed9ce96003ff447ed1e",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Hunan_cuisine,_stir-fried_tomato_with_eggs.jpg",
+      "license": "CC BY 3.0",
+      "author": "Huangdan2060"
+    },
+    {
+      "path": "3.jpg",
+      "sha256": "f7ae9b8b2c442ac549bb7fb7211a65379b50ca43a47191a0febd0fae1da3fbb1",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kung-pao-shanghai.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Steven G. Johnson"
+    },
+    {
+      "path": "4.jpg",
+      "sha256": "0b7a0b57ed498234f2ec3af0c614969338061338be5c8b02f9b1b9baab980d26",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E5%8F%AF%E4%B9%90%E9%B8%A1%E7%BF%85.jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Wuzhiya"
+    },
+    {
+      "path": "5.jpg",
+      "sha256": "01f2e133f81c2ef0049ebafc7c29c979884692e2597add88975094f12187ae88",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E7%B4%85%E7%87%92%E8%82%89_Braised_pork_in_brown_sauce.jpg",
+      "license": "CC BY 2.0",
+      "author": "FotoosVanRobin"
+    },
+    {
+      "path": "7.jpg",
+      "sha256": "b88718bbf105ed91deb2d2f62e57f82b6324de4b982a7d65413a8354e6e3feba",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E6%B8%85%E8%92%B8%E9%B2%88%E9%B1%BC.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Walter Grassroot"
+    },
+    {
+      "path": "10.jpg",
+      "sha256": "e41f20cd56fc1e1d594b8c97e2a0a61e5f921bd9b731c951c689457190896060",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Billyfoodmabodofu3.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Archon6812"
+    },
+    {
+      "path": "11.jpg",
+      "sha256": "975ffca12662a5c80d663b04502ce672b976c115a276d710af3105b2eedccc34",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:ChineseSteamedEgg.jpg",
+      "license": "CC BY-SA 2.0",
+      "author": "Tam3415"
+    },
+    {
+      "path": "16.jpg",
+      "sha256": "ed909e1a973055ade34b87cbcebd09a31e0bb9a31d58a848424a7a38715be4f6",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E8%91%B1%E8%8A%B1%E8%91%B1%E6%B2%B9%E6%8B%8C%E9%9D%A2.jpg",
+      "license": "CC0",
+      "author": "Suginami"
+    },
+    {
+      "path": "17.jpg",
+      "sha256": "7da577629974e1c5c289361c51b16350b39236f777d37670d5a7a49bb9728676",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Egg_fried_rice.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "ProjectManhattan"
+    },
+    {
+      "path": "18.jpg",
+      "sha256": "3cdf8c6e666ede2f1e2705fbe390f48887412763b9323e83f3be76ef4464176c",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Curry_rice.jpg",
+      "license": "CC0",
+      "author": "wizdata"
+    }
+  ]
+}

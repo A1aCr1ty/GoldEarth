@@ -31,7 +31,7 @@ function money(value: number | null, currency = "CNY") {
 
 function sourceName(source: string) {
   if (source?.startsWith("domestic:v1:")) {
-    const names: Record<string, string> = { nine: "九机良品", xianyu: "闲鱼", jd: "京东二手", zhuanzhuan: "转转" };
+    const names: Record<string, string> = { suning: "苏宁二手", taobao: "淘宝二手", nine: "九机良品", xianyu: "闲鱼", jd: "京东二手", zhuanzhuan: "转转" };
     const platforms = source.slice("domestic:v1:".length).split("+").filter(Boolean);
     return `${platforms.length > 1 ? "国内多平台" : "单平台参考"} · ${platforms.map(id => names[id] || id).join(" / ")}`;
   }
@@ -228,6 +228,9 @@ function Spark({ values }: { values: number[] }) {
 
 /** 选中那件的详情：趋势图 + 抓价 */
 function Detail({ targetId }: { targetId: string }) {
+  const [sampleSource, setSampleSource] = useState("all");
+  const [sampleSort, setSampleSort] = useState("default");
+  useEffect(() => { setSampleSource("all"); }, [targetId]);
   const trend = usePrices((s) => s.trend);
   const loading = usePrices((s) => s.trendLoading);
   const probeRun = usePrices((s) => s.runProbe);
@@ -357,8 +360,12 @@ function Detail({ targetId }: { targetId: string }) {
               {!!probe.listings?.length && (
                 <details className="mt-2 text-muted-foreground">
                   <summary className="cursor-pointer">查看本次 {probe.listings.length} 条商品样本</summary>
-                  <ul className="mt-2 space-y-2">
-                    {probe.listings.map((item) => (
+                  <div className="my-3 flex flex-wrap gap-2">
+                    <select aria-label="筛选报价平台" className="rounded border bg-background p-1 text-xs" value={sampleSource} onChange={e => setSampleSource(e.target.value)}><option value="all">全部平台</option>{probe.sources?.filter(source => source.count > 0).map(source => <option key={source.id} value={source.id}>{source.name}（{source.count}）</option>)}</select>
+                    <select aria-label="报价排序" className="rounded border bg-background p-1 text-xs" value={sampleSort} onChange={e => setSampleSort(e.target.value)}><option value="default">默认排序</option><option value="asc">价格从低到高</option><option value="desc">价格从高到低</option></select>
+                  </div>
+                  <ul className="mt-2 max-h-96 space-y-2 overflow-y-auto">
+                    {probe.listings.filter(item => sampleSource === "all" || item.source === sampleSource).sort((a, b) => sampleSort === "asc" ? a.price - b.price : sampleSort === "desc" ? b.price - a.price : 0).map((item) => (
                       <li key={item.url} className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <button className="text-left underline hover:text-foreground" onClick={() => openSource(item.url)}>{item.title}</button>

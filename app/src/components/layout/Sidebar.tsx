@@ -10,7 +10,7 @@ import {
   writeJson,
 } from "@/lib/sidebar";
 import {
-  Bot, BookOpen, Building2, Car, Compass, FileText, FolderTree, Gem, LayoutDashboard,
+  ChefHat, Dumbbell, Bot, BookOpen, Building2, Car, Compass, FileText, FolderTree, Gem, LayoutDashboard,
   Network, Search, Settings as SettingsIcon, Tags, TrendingUp, CircleDot, Music2, Wallet,
 } from "lucide-react";
 
@@ -32,6 +32,8 @@ const ICONS: Record<SidebarIconName, typeof Compass> = {
   basketball: CircleDot,
   music: Music2,
   account: Wallet,
+  recipe: ChefHat,
+  workout: Dumbbell,
 };
 
 /** 图标栏里的悬浮提示：折叠后没有文字，hover 才能知道是哪一页 */

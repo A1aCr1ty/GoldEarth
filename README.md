@@ -848,9 +848,21 @@ cargo test --lib trending_smoke -- --ignored --nocapture
 
 从「每日 → 音乐」打开音乐空间。采用曲库列表、唱片展示及全局底部播放栏布局，可批量选择或拖入音频，搜索歌曲/歌手、收藏、查看播放队列、切换上一首/下一首、拖动进度、调节音量，并选择列表循环、单曲循环或随机播放。切换到其他页面后仍会继续播放。
 
-音频文件和收藏保存到本机 WebView 的 IndexedDB，重新打开后恢复曲库，不自动播放；从曲库移除不会删除原文件。歌曲与歌手根据「歌手 - 歌名.扩展名」解析，未匹配的歌手显示为未知歌手，时长在首次加载播放时读取。目前不接入在线曲库或账号。音频通过 HTMLAudioElement 调用系统 WebView 解码，支持情况取决于系统的编码能力；不能解码的文件会显示错误，可尝试转换为 MP3/WAV。Tauri 主窗口关闭原生拖放拦截，以便网页接收音频文件拖放，此配置需要重启桌面开发进程。
+音频文件和收藏保存到本机 WebView 的 IndexedDB，重新打开后恢复曲库，不自动播放；从曲库移除不会删除原文件。本地文件的歌曲与歌手根据「歌手 - 歌名.扩展名」解析，未匹配的歌手显示为未知歌手，时长在首次加载播放时读取。音频通过 HTMLAudioElement 调用系统 WebView 解码，支持情况取决于系统的编码能力；不能解码的文件会显示错误，可尝试转换为 MP3/WAV。Tauri 主窗口关闭原生拖放拦截，以便网页接收音频文件拖放，此配置需要重启桌面开发进程。
 
 验证：在 `app` 执行 `node --test tests/music.test.cjs tests/sidebar.test.cjs` 及 `npm run build`。浏览器实测使用生成的 WAV，验证导入、解码播放、暂停、进度调整、单曲循环、跨页播放、搜索、播放队列及刷新恢复收藏。
+
+「在线搜索」同时接入 [Audius](https://docs.audius.co/api/)、[Internet Archive](https://archive.org/developers/md-read.html) 和 [Wikimedia Commons](https://commons.wikimedia.org/wiki/Commons:API/MediaWiki)，支持全部音源聚合或单独筛选。输入曲名、歌手或风格关键词，也可以点击 Lo-fi、轻音乐、电子、爵士、古典、摇滚、民谣、钢琴、古琴标签探索。来源并行请求、逐个返回结果，各自显示状态；一个来源失败不影响其他结果，可独立分页和重试，同一来源的文件不会重复加入。
+
+Audius 仅显示 API 明确标记为可用、可完整在线播放、无需付费/解锁且当前匿名访问允许的歌曲，支持试听、免费收听和加入在线曲库。在线歌曲在 IndexedDB 中保存元数据和稳定的官方播放地址，仍需要联网，不保存成本地音频。Internet Archive 从音乐分类中搜索明确标记为 Creative Commons/公共领域的录音，读取每条录音的文件列表，优先 MP3 并合并同一录音的其他格式；每页最多读取 6 个录音项目、每项目展示最多 12 首，单次最多并发 3 个文件列表请求。Archive 与 Commons 的可下载音频可保存为本地文件副本后离线播放（单文件最大 80 MB）。试听与主播放器互斥，离开在线搜索会停止试听；我的曲库分别标明需联网播放或离线音频，保留来源及授权。公开音源不覆盖所有商业发行歌曲，不接入网易云账号或商业曲库。
+
+桌面端的 `music_search`、`music_download`、`music_catalog_search`、`music_archive_download` 已在命令注册、构建清单及主窗口权限表中同步声明，新增命令需要重启 `cargo tauri dev` 后使用。搜索与下载走 Rust，浏览器预览使用同一公开 API 的 CORS 接口。下载按来源编号重新解析文件地址，限制到来源的 HTTPS 主机及对应存储节点，拒绝无授权、私有、受限下载文件和路径穿越；检查文件大小与音频头，拒绝 HTML 错误页。连接超时 8 秒，单次搜索/元数据请求 22–25 秒，单次文件下载 90 秒；失败可重试且不留下损坏曲库条目。音频仍使用系统 WebView 解码，扩充音源不会改变本机的编解码器能力。
+
+在线音乐验证：在 `app` 执行 `node --test tests/online-music.test.cjs tests/music.test.cjs tests/sidebar.test.cjs`；根目录执行 `node src-tauri/scripts/check_app_permissions.mjs`、`cargo test --manifest-path src-tauri/Cargo.toml --lib commands::music --offline`。真实接口验证为 `cargo test --manifest-path src-tauri/Cargo.toml --lib commands::music::tests::live_search_and_audio_download --offline -- --ignored --nocapture`。浏览器已实测搜索 piano、下载 Piano-phrase、解码播放及刷新恢复音频与来源信息。
+
+新增音源验证：`cargo test --manifest-path src-tauri/Cargo.toml --lib commands::music_catalog::tests::live_catalogs --offline -- --ignored --nocapture`，验证真实 Audius 搜索、Archive 搜索及开放授权 MP3 下载。前端覆盖付费/受限结果过滤、录音多格式去重、来源授权保留，以及在线曲目不下载文件且仅使用官方播放地址。
+
+浏览器聚合实测：jazz 首批返回 Audius 18 条、Archive 67 条、Commons 19 条，共 104 个结果（数量随来源变化）。Audius《Siberian Jazz》主播放器实际解码时长约 115 秒，播放进度正常推进；在线曲库刷新后恢复来源和“需联网播放”标记。测试歌曲已移除，预览服务在验证后关闭。
 
 ### 侧边栏目录与缩放
 
@@ -860,3 +872,20 @@ cargo test --lib trending_smoke -- --ignored --nocapture
 
 目录结构和几何规则放在 `app/src/lib/sidebar.ts`，不依赖 React 和图标库，所以可以脱离渲染层单测；图标映射和交互在 `app/src/components/layout/Sidebar.tsx`。要加新页面：在 `App.tsx` 注册路由，同时在 `NAV_TREE` 里补一条——测试会校验两边没有漏掉。
 
+
+
+## 家常食谱、锻炼与扩展商品查价
+
+- 「每日 → 家常食谱」内置 24 道菜，支持菜名/多食材搜索、分类、收藏、1～8 人份用量换算，提供明确食材数量与分步做法。配方为内置家常参考内容。其中 10 道有 Wikimedia Commons 成品参考图，列表和详情都会显示，并注明作者、许可，以及照片和本配方不一致的地方；其余菜还没有找到能对上菜的开放许可照片，所以仍只显示文字。
+- 「每日 → 锻炼」参考 [openGym](https://github.com/DuarteSantos8/openGym) 的计划与逐组记录工作流，独立实现 7 套训练模板、34 个动作、每周安排、自由训练、组数/重量/次数/秒数记录、组间计时、历史明细与体重记录。动作库可按肌群、器械和名称筛选。没有使用其代码或受限动作图片。未完成训练及计时截止时间自动保留，刷新可继续；完成训练仅保存已完成组。食谱收藏及锻炼数据保存在当前 WebView 的 localStorage，暂不随应用存储目录迁移或跨设备同步。
+- 商品查价在九机、闲鱼、京东、转转基础上新增苏宁和淘宝二手采集适配（试接入；已核对苏宁真实公开卡片结构，但测试关键词没有匹配样本，淘宝受浏览器访问策略限制未完成联网验收）。搜索页最多触发 8 次滚动加载、保留最多 100 条去重样本；转转同款详情从 4 个增加至最多 12 个，并限制采集时间。实际条数取决于来源可访问性和匹配商品，不保证每次达到上限。找靓机仍仅列为未接入来源。报价按平台内中位数再等权取中位数，不把登录页、失败或示例数据计入行情。样本支持平台筛选与价格排序。
+
+验证：`npm --prefix app run build`；`node --test app/tests/lifestyle.test.cjs app/tests/sidebar.test.cjs`；`node src-tauri/scripts/check_public_prices.mjs`；`node app/scripts/check_prices_store.mjs`；在 `src-tauri` 运行 `cargo test --lib public_prices --offline`。平台适配的脚手架测试不能替代真实网络验收。
+
+### 真人动作示范素材
+
+动作库及训练中的「动作示范」已替换火柴人 SVG，采用 [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) 的真人关键姿势照片。34 个动作均有本地图片，支持关键帧选择、手动开启轮播（1.8 / 3 / 5 秒）、来源与许可展开，以及加载失败提示。默认静态展示；照片轮播并非连续视频或训练节拍。平板支撑和侧平板只保留成直线的支撑姿势。壶铃高脚杯、直腿硬拉、基础死虫式、跑步机步行、垫高且下放很深的凳上臂屈伸、哑铃垫脚的单腿提踵、后脚搭凳的分腿蹲等与家中做法不一致的地方，都在示范旁写明。
+
+仓库声明使用 Unlicense；原始图片未改动，许可证保存在 `app/public/exercise-media/LICENSE.txt`，每张图片的固定版本来源、检索日期和 SHA-256 位于同目录 `ATTRIBUTION.json`。可用 `python app/scripts/download_exercise_media.py` 校验并恢复素材。动作照片随前端一起打包，运行时无需请求 GitHub。食谱参考图来自 Wikimedia Commons，原图未改，作者、许可和 SHA-256 在 `app/public/recipe-media/ATTRIBUTION.json`。
+
+同时检索了 [wger](https://wger.readthedocs.io/en/stable/)：其代码与媒体许可不同，图片需逐项保留作者及 CC 许可，因此本次未混入未核对授权的 wger 媒体。也未使用 openGym 仅限其应用使用的 Gym Visual 素材。

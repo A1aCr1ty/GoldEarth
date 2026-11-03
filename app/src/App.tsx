@@ -17,6 +17,8 @@ import TrackerPage from "@/pages/TrackerPage";
 import NbaPage from "@/pages/NbaPage";
 import RoboticsPage from "@/pages/RoboticsPage";
 import MusicPage from "@/pages/MusicPage";
+import RecipesPage from "@/pages/RecipesPage";
+import WorkoutPage from "@/pages/WorkoutPage";
 export default function App() {
   return (
     <HashRouter>
@@ -24,6 +26,8 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/recipes" element={<RecipesPage />} />
+          <Route path="/workout" element={<WorkoutPage />} />
           <Route path="/music" element={<MusicPage />} />
           <Route path="/nba" element={<NbaPage />} />
           <Route path="/robotics" element={<RoboticsPage />} />
