@@ -2,7 +2,7 @@ import type { Quote } from "@/types";
 import { positionMarketValue, type Position } from "./stockAccountImport";
 
 export function accountQuoteCode(code: string): string | null {
-  const clean = code.trim().toLowerCase().replace(/[.\s]/g, "");
+  const clean = code.trim().toLowerCase().replace(/^(\d{6})\.(sh|sz|bj)$/, "$2$1").replace(/[.\s]/g, "");
   if (/^(sh|sz|bj)\d{6}$/.test(clean)) return clean;
   if (!/^\d{6}$/.test(clean)) return null;
   return `${/^(4|8|92)/.test(clean) ? "bj" : /^[569]/.test(clean) ? "sh" : "sz"}${clean}`;

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tauri": "app\\node_modules\\.bin\\tauri.cmd"
+    "tauri": "app\\node_modules\\.bin\\tauri.cmd",
+    "dev:stable": "app\\node_modules\\.bin\\tauri.cmd dev --no-watch"
   },
   "keywords": [],
   "author": "",

@@ -7,6 +7,7 @@ pub mod housing;
 pub mod library;
 pub mod market;
 pub mod strategy;
+pub mod value_research;
 pub mod notes;
 pub mod nba;
 pub mod nba_feed;

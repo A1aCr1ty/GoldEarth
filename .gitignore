@@ -27,6 +27,8 @@ app/.vite/
 *.tmp
 *.bak
 .runlogs/
+src-tauri/resources/strategy/value/
+__pycache__/
 recovered-notes/
 
 # Editor

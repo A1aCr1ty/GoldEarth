@@ -1,0 +1,7 @@
+# Training outputs are data, not Rust or bundled application source.
+# Keep Python/JSON source definitions watched; ignore only generated state.
+resources/strategy/data/
+resources/strategy/value/
+resources/strategy/**/__pycache__/
+resources/strategy/*.log
+resources/strategy/**/*.pending

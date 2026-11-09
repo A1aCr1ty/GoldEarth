@@ -61,6 +61,8 @@ fn main() {
             "file_search_reveal",
             "archify_template",
             "strategy_snapshot",
+            "value_research_status",
+            "value_research_run",
             "strategy_review",
             "stock_swing_review",
             "prepare_archify_generation",

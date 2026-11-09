@@ -1,0 +1,12 @@
+[
+  {"id":"bailey-backtest-overfitting","kind":"paper","title":"The Probability of Backtest Overfitting","url":"https://sdm.lbl.gov/oapapers/ssrn-id2507040-bailey.pdf","use":"回测过拟合与多重试验控制，不作为收益标签。"},
+  {"id":"deflated-sharpe","kind":"paper","title":"The Deflated Sharpe Ratio","url":"https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf","use":"评估多次试验后的绩效指标。"},
+  {"id":"cfainstitute-reporting-quality","kind":"methodology","title":"Evaluating Quality of Financial Reports","url":"https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/evaluating-quality-financial-reports","use":"盈利质量和会计政策分析框架。"},
+  {"id":"cfainstitute-residual-income","kind":"methodology","title":"Residual Income Valuation","url":"https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/residual-income-valuation","use":"剩余收益估值框架。"},
+  {"id":"damodaran-valuation","kind":"methodology","title":"Investment Valuation: Author Resources","url":"https://pages.stern.nyu.edu/~adamodar/New_Home_Page/valuation/val.htm","use":"估值课程和作者公开配套资料，不包含受限书籍全文。"},
+  {"id":"gu-kelly-xiu","kind":"paper","title":"Empirical Asset Pricing via Machine Learning","url":"https://dachxiu.chicagobooth.edu/download/empirical.pdf","use":"机器学习资产定价方法与样本外评估。"},
+  {"id":"citic-research","kind":"research_index","title":"中信证券研究入口","url":"https://research.citics.com/","use":"公开摘要和报告索引，不绕过登录或付费限制。"},
+  {"id":"cicc-research","kind":"research_index","title":"中金公司研究平台","url":"https://www.ciccwm.com/ciccwmweb/stock_business/equity_research.html","use":"机构研究方法入口，不将平台介绍当作具体证券观点。"},
+  {"id":"cmbi-research","kind":"research_index","title":"招商证券国际研究目录","url":"https://www.cmschina.com.hk/en/Research/HK-Research","use":"公开研报标题、日期、作者和可访问全文。"},
+  {"id":"goldman-2025-outlook","kind":"research_report","title":"2025 Outlook: The Year of the Alpha Bet","url":"https://www.goldmansachs.com/pdfs/insights/goldman-sachs-research/2025-equity-outlook-the-year-of-the-alpha-bet/2025Outlook.pdf","use":"公开策略报告样例；不是当前市场预测或A股个股评级。"}
+]

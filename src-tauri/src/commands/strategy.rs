@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 
-static REVIEW: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(super) static REVIEW: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[tauri::command]
 pub async fn stock_swing_review(app: AppHandle, codes: Vec<String>) -> Result<Value, String> {
@@ -107,7 +107,7 @@ mod tests {
     }
 }
 
-fn prepare_engine(root: &Path) -> Result<(), String> {
+pub(super) fn prepare_engine(root: &Path) -> Result<(), String> {
     std::fs::create_dir_all(root.join("platform")).map_err(|e| e.to_string())?;
     for (name, source) in [
         ("build_platform.py", include_str!("../../resources/strategy/build_platform.py")),

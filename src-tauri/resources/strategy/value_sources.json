@@ -1,0 +1,9 @@
+[
+  {"title":"CFA：财报质量分析", "url":"https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/evaluating-quality-financial-reports", "use":"盈利质量、会计政策、现金流与利润差异；分析框架，不是收益标签。"},
+  {"title":"CFA：剩余收益估值", "url":"https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/residual-income-valuation", "use":"账面价值、资本成本与剩余收益；金融行业需独立模型。"},
+  {"title":"Damodaran / Investment Valuation 作者配套资料", "url":"https://pages.stern.nyu.edu/~adamodar/New_Home_Page/valuation/val.htm", "use":"现金流折现、相对估值、课程及书籍配套材料；未下载受限书籍全文。"},
+  {"title":"巨潮资讯：公告与定期报告", "url":"https://www.cninfo.com.cn/", "use":"原始披露核验入口；尚未接入批量原始公告解析。"},
+  {"title":"上交所：上市公司经营业绩", "url":"https://www.sse.com.cn/disclosure/listedinfo/listedcompanies/", "use":"XBRL辅助核验，以原始PDF为准。"},
+  {"title":"Tushare 财务指标接口", "url":"https://tushare.pro/document/2?doc_id=79", "use":"可选扩展，需用户自备权限；公告日并不自动证明数值为当时版本。当前未接入。"},
+  {"title":"回测过拟合研究", "url":"https://sdm.lbl.gov/oapapers/ssrn-id2507040-bailey.pdf", "use":"保留实验记录，隔离未来标签，不能反复用测试集挑选参数。"}
+]

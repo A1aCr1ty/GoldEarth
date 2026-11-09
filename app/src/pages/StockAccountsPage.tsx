@@ -11,6 +11,7 @@ import { useAccountQuotes } from "@/lib/useAccountQuotes";
 import { AccountTransactions } from "@/components/stock/AccountTransactions";
 import { AccountStrategyAdvice } from "@/components/stock/AccountStrategyAdvice";
 import { HoldingSwingPanel } from "@/components/stock/HoldingSwingPanel";
+import { HoldingValuePanel } from "@/components/stock/HoldingValuePanel";
 import { readStockAccounts as readAccounts, saveStockAccounts as saveAccounts } from "@/lib/stockAccountStorage";
 
 const money = (n: number | null | undefined) => n == null ? "—" : `¥${n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -114,6 +115,7 @@ export default function StockAccountsPage() {
                 {valuedPositions.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm"><thead className="border-y bg-muted/40 text-xs text-muted-foreground"><tr>{["证券", "持仓 / 可用", "成本价", "最新价", "市值", "估算持有盈亏"].map((h) => <th key={h} className="px-4 py-3 text-right first:text-left">{h}</th>)}</tr></thead><tbody>{valuedPositions.map((p) => <tr key={p.code} className="border-b last:border-0"><td className="px-4 py-3"><div className="font-medium">{p.name}</div><div className="mt-0.5 text-xs text-muted-foreground">{p.code}</div></td><td className="px-4 py-3 text-right tabular-nums">{p.quantity.toLocaleString()} / {p.available?.toLocaleString() ?? "—"}</td><td className="px-4 py-3 text-right tabular-nums">{money(p.cost)}</td><td className="px-4 py-3 text-right tabular-nums"><div>{money(p.price)}</div><div className="mt-1 text-[10px] text-muted-foreground">{p.priceSource === "market" ? accountQuoteTime(p.quoteTime) : "导入快照"}</div></td><td className="px-4 py-3 text-right tabular-nums">{money(positionMarketValue(p))}</td><td className={`px-4 py-3 text-right tabular-nums ${profitClass(p.profit)}`}>{money(p.profit)}</td></tr>)}</tbody></table></div> : <div className="flex flex-col items-center px-6 py-14 text-center"><ArrowDownToLine className="mb-3 h-8 w-8 text-muted-foreground/60" /><div className="text-sm font-medium">{selected.syncedAt ? "最近导入的账户当前无持仓" : "导入账户持仓开始查看"}</div><div className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">直接选择同花顺导出的“汇总持仓.xlsx”，无需转换格式。导入会替换当前账户的持仓快照。</div><Button className="mt-4" size="sm" variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}><ArrowDownToLine className="h-3.5 w-3.5" />选择 Excel / CSV 文件</Button></div>}
               </CardContent>
             </Card>
+            <HoldingValuePanel key={selected.id} positions={valuedPositions} accountId={selected.id} />
             </>}
             {tab === "swing" && <HoldingSwingPanel key={`swing-${selected.id}`} account={selected} />}
             {tab === "transactions" && <AccountTransactions key={`transactions-${selected.id}`} account={selected} />}

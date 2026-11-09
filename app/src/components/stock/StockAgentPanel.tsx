@@ -17,10 +17,12 @@ import { useAgents } from "@/store/agents";
 import { useStocks } from "@/store/stocks";
 import { buildMarketContext } from "@/lib/marketContext";
 import { analyzeFundamentals, buildFinancialContext, latestFinancialReport } from "@/lib/fundamental";
+import { institutionalContext } from '@/lib/institutionalResearch';
 import { tauri } from "@/lib/tauri";
 
 /** 常用分析请求，点一下填进输入框 */
 const PRESETS = [
+  { key: "value", label: "长期价值研究", prompt: "请按机构研究框架分析这只A股未来3至12个月的投资价值：商业模式与行业竞争、盈利驱动与预期差、现金流质量、资本配置、估值三情景、催化剂及反证。明确分开财报事实、机构观点、模型估计和待核验假设；如能联网，寻找机构官方公开研报，注明标题、机构、作者、发布日期、链接及适用市场，未取得全文不要声称已阅读。缺少同行估值或未来盈利参数时不要编造目标价。最后列出需要持续跟踪的指标，不保证月度盈利。" },
   { key: "analyze", label: "综合分析", prompt: "请综合分析这只股票：趋势、均线形态、MACD/RSI/KDJ 指标状态、量价配合、资金流向，并指出关键支撑位和压力位。" },
   { key: "trend", label: "趋势研判", prompt: "这只股票目前处于什么趋势阶段？请结合均线排列和近期K线说明依据。" },
   { key: "risk", label: "风险点", prompt: "这只股票当前有哪些风险信号？请从指标背离、量价异常、估值和资金流角度分析。" },
@@ -127,7 +129,7 @@ export function StockAgentPanel() {
         const latest = latestFinancialReport(financial);
         const analysis = latest ? analyzeFundamentals(latest) : null;
         const financialContext = buildFinancialContext(financial, analysis);
-        context = [buildMarketContext(detail, bars, trend, flow), financialContext].filter(Boolean).join("\n\n");
+        context = [buildMarketContext(detail, bars, trend, flow), financialContext, institutionalContext()].filter(Boolean).join("\n\n");
       }
       const run = await runAgent(agentId, text, sessionId ?? undefined, undefined, context, current);
       setActiveRunId(run.id);

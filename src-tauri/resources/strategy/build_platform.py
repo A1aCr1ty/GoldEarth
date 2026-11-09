@@ -221,7 +221,7 @@ def fetch_universe(n: int = TARGET_N) -> list[tuple[str, str, str]]:
     return rows
 
 
-def fetch_eastmoney(code: str) -> pd.DataFrame | None:
+def fetch_eastmoney(code: str, *, min_rows: int = 201) -> pd.DataFrame | None:
     query = (
         f"?secid={secid_of(code)}&ut=fa5fd1943c7b386f172d6893dbfba10b"
         "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
@@ -241,7 +241,7 @@ def fetch_eastmoney(code: str) -> pd.DataFrame | None:
             with urllib.request.urlopen(req, timeout=40) as resp:
                 raw = json.loads(resp.read().decode("utf-8"))
             lines = (raw.get("data") or {}).get("klines") or []
-            if len(lines) > 200:
+            if len(lines) >= min_rows:
                 rows = []
                 for line in lines:
                     p = line.split(",")
@@ -252,7 +252,7 @@ def fetch_eastmoney(code: str) -> pd.DataFrame | None:
     return None
 
 
-def fetch_tencent(code: str) -> pd.DataFrame | None:
+def fetch_tencent(code: str, *, min_rows: int = 201, require_volume: bool = False) -> pd.DataFrame | None:
     if code == "000300":
         pref = "sh"
     elif code == "399006":
@@ -267,31 +267,41 @@ def fetch_tencent(code: str) -> pd.DataFrame | None:
             raw = json.loads(resp.read().decode("utf-8"))
         node = raw.get("data", {}).get(symbol, {})
         lines = node.get("qfqday") or node.get("day") or []
+        if len(lines) < min_rows:
+            return None
+        columns = ["date", "open", "close", "high", "low"]
+        if require_volume:
+            columns.append("volume")
         rows = []
         for p in lines:
-            rows.append((p[0], float(p[1]), float(p[2]), float(p[3]), float(p[4])))
-        if len(rows) > 200:
-            return pd.DataFrame(rows, columns=["date", "open", "close", "high", "low"])
+            rows.append((p[0], *(float(p[i]) for i in range(1, len(columns)))))
+        return pd.DataFrame(rows, columns=columns)
     except Exception:
         return None
     return None
 
 
-def load_code(code: str) -> pd.DataFrame | None:
+def load_code(code: str, *, min_rows: int = 201, require_volume: bool = False) -> pd.DataFrame | None:
+    def has_volume(frame):
+        if frame is None or "volume" not in frame:
+            return False
+        volume = pd.to_numeric(frame["volume"], errors="coerce")
+        return np.isfinite(volume).all() and (volume >= 0).all() and (volume > 0).any()
+
     path = os.path.join(DATA, f"{code}.csv")
     with MANIFEST_LOCK:
         man = MANIFEST.get(code) or {}
     if man.get("beg") == BEG and man.get("last", "") >= TODAY and os.path.exists(path):
         old = pd.read_csv(path)
-        if "volume" in old.columns and len(old) > 200:
+        if len(old) >= min_rows and ("volume" in old.columns if not require_volume else has_volume(old)):
             df = old[["date", "open", "close", "high", "low", "volume"]].copy()
             df["date"] = pd.to_datetime(df["date"])
             return df.drop_duplicates("date").sort_values("date").reset_index(drop=True)
-    df = fetch_eastmoney(code)
-    if df is None:
+    df = fetch_eastmoney(code, min_rows=min_rows)
+    if df is None or (require_volume and not has_volume(df)):
         time.sleep(0.4)
-        df = fetch_tencent(code)
-    if df is None:
+        df = fetch_tencent(code, min_rows=min_rows, require_volume=require_volume)
+    if df is None or (require_volume and not has_volume(df)):
         return None
     df["date"] = pd.to_datetime(df["date"])
     df = df.drop_duplicates("date").sort_values("date").reset_index(drop=True)

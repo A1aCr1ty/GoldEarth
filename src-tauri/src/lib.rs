@@ -64,6 +64,8 @@ pub fn run() {
             commands::file_search::file_search_reveal,
             commands::archify::archify_template,
             commands::strategy::strategy_snapshot,
+            commands::value_research::value_research_status,
+            commands::value_research::value_research_run,
             commands::strategy::strategy_review,
             commands::strategy::stock_swing_review,
             commands::archify::prepare_archify_generation,

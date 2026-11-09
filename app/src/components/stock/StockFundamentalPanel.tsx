@@ -16,6 +16,7 @@ import {
 } from "@/lib/fundamental";
 import { useStocks } from "@/store/stocks";
 import type { Candle, FinancialReports, Quote } from "@/types";
+import { institutionalSources, researchChecklist } from '@/lib/institutionalResearch';
 
 interface LoadedData {
   financial: FinancialReports | null;
@@ -155,6 +156,12 @@ export function StockFundamentalPanel({ onAskAgent }: { onAskAgent: () => void }
           </div>
         </section>
 
+        <section className="rounded-lg border bg-card p-4">
+          <h3 className="font-semibold">机构研究方法 · 3—12个月投资价值</h3>
+          <p className="mt-1 text-muted-foreground">借鉴公开研究的分析结构。下方数值来自公司财报；资料入口并不代表这些机构已对当前股票给出观点。</p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">{researchChecklist(analysis).map(item => <div key={item.title} className="rounded border p-3"><h4 className="font-medium">{item.title}</h4><p className="mt-2 leading-5">{item.evidence}</p><p className="mt-1 leading-5 text-muted-foreground">{item.next}</p></div>)}</div>
+          <details className="mt-3"><summary className="cursor-pointer">机构资料与核验范围</summary>{institutionalSources.map(source => <div key={source.url} className="mt-3 border-t pt-2"><button className="text-left underline" onClick={() => void open(source.url, source.title)}>{source.institution} · {source.title}</button><p className="mt-1 text-muted-foreground">{source.published ? `发布 ${source.published}` : '动态资料入口'} · 核验 {source.reviewed} · {source.access} · {source.kind}</p><p className="mt-1">{source.lesson}</p></div>)}</details>
+        </section>
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-lg border bg-card p-4"><h3 className="font-semibold">关键优势</h3>
             {analysis.strengths.length ? <ul className="mt-2 space-y-2 leading-5">{analysis.strengths.map(item => <li key={item}>· {item}</li>)}</ul> : <p className="mt-2 text-muted-foreground">当前没有达到规则阈值的明显优势。</p>}</div>
