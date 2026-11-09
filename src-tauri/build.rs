@@ -38,6 +38,10 @@ fn main() {
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "ping",
+            "music_search",
+            "music_download",
+            "music_catalog_search",
+            "music_archive_download",
             "robot_feed",
             "robot_collection",
             "robot_sources",

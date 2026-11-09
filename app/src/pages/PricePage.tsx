@@ -43,7 +43,7 @@ export default function PricePage() {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold">价格追踪</h1>
           <p className="text-[0.6875rem] text-muted-foreground">
-            对照国内二手平台的人民币在售报价，展示来源覆盖、成色与样本明细
+            转转 / 九机 / 闲鱼 / 京东 / 苏宁 / 淘宝 · 多轮加载采样，按平台核对报价与成色
           </p>
         </div>
 

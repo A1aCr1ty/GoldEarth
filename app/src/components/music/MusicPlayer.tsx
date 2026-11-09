@@ -17,10 +17,11 @@ export function MusicPlayer() {
     element.pause();
     useMusic.setState({ position: 0 });
     if (!track) { element.removeAttribute("src"); element.load(); return; }
-    const url = URL.createObjectURL(track.blob);
+    const url = track.blob ? URL.createObjectURL(track.blob) : track.streamUrl;
+    if (!url) return;
     element.src = url;
     element.load();
-    return () => { element.pause(); element.removeAttribute("src"); element.load(); URL.revokeObjectURL(url); };
+    return () => { element.pause(); element.removeAttribute("src"); element.load(); if (track.blob) URL.revokeObjectURL(url); };
   }, [track?.id]);
   useEffect(() => {
     const element = audio.current;
@@ -33,7 +34,7 @@ export function MusicPlayer() {
       void element.play().catch(error => {
         if (error.name === "AbortError") return;
         if (useMusic.getState().currentId !== track.id) return;
-        useMusic.setState({ playing: false, error: error.name === "NotAllowedError" ? "请点击播放按钮开始播放。" : "无法解码此音频，请尝试其他文件或转换为 MP3 / WAV。" });
+        useMusic.setState({ playing: false, error: error.name === "NotAllowedError" ? "请点击播放按钮开始播放。" : track.streamUrl ? "在线歌曲播放失败，请检查网络后重试，或尝试其他歌曲。" : "无法解码此音频，请尝试其他文件或转换为 MP3 / WAV。" });
       });
     } else element.pause();
   }, [state.playing, track?.id, state.seekTo]);
@@ -54,7 +55,7 @@ export function MusicPlayer() {
         void saveMusic([updated]).catch(() => {});
       }}
       onEnded={() => useMusic.getState().next(1, true)}
-      onError={() => { if (audio.current?.getAttribute("src")) useMusic.setState({ playing: false, error: "无法读取或解码此音频。当前系统可能不支持该编码，请尝试 MP3 / WAV 文件。" }); }} />
+      onError={() => { if (audio.current?.getAttribute("src")) useMusic.setState({ playing: false, error: track?.streamUrl ? "在线歌曲暂不可播，请检查网络或稍后重试。" : "无法读取或解码此音频。当前系统可能不支持该编码，请尝试 MP3 / WAV 文件。" }); }} />
     {visible && <div className="music-player">
       <div className="music-now"><div className="music-mini-cover"><Music2 size={23} /></div><div className="min-w-0"><strong>{track?.title ?? "还没有正在播放的音乐"}</strong><span>{track?.artist ?? "导入音乐，开启你的私人电台"}</span></div><button className={`music-icon ${track?.favorite ? "is-liked" : ""}`} aria-label="收藏当前歌曲" disabled={!track} onClick={() => track && void state.favorite(track.id)}><Heart size={18} fill={track?.favorite ? "currentColor" : "none"} /></button></div>
       <div className="music-controls"><div className="music-transport"><button className="music-icon" title={modeLabel} aria-label={modeLabel} onClick={() => useMusic.setState({ mode: state.mode === "loop" ? "single" : state.mode === "single" ? "shuffle" : "loop" })}><ModeIcon size={18} /></button><button className="music-icon" aria-label="上一首" disabled={!state.tracks.length} onClick={() => state.next(-1)}><SkipBack size={20} /></button><button className="music-play" aria-label={state.playing ? "暂停" : "播放"} disabled={!state.tracks.length} onClick={state.toggle}>{state.playing ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}</button><button className="music-icon" aria-label="下一首" disabled={!state.tracks.length} onClick={() => state.next()}><SkipForward size={20} /></button><span className="music-mode-text">{modeLabel}</span></div><div className="music-progress"><span>{musicTime(state.position)}</span><input aria-label="播放进度" type="range" min="0" max={track?.duration || 0} step="0.1" value={Math.min(state.position, track?.duration || 0)} disabled={!track?.duration} onChange={event => useMusic.setState({ seekTo: Number(event.target.value), position: Number(event.target.value) })} /><span>{musicTime(track?.duration ?? 0)}</span></div></div>

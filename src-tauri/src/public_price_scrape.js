@@ -20,8 +20,16 @@
     if (!Number.isFinite(price) || price <= 0 || price > 10000000) return;
     let url;
     try { url = new URL(href, location.href); } catch (_) { return; }
-    const hosts = { nine: ['m2.9ji.com'], xianyu: ['www.goofish.com'], jd: ['item.jd.com'], zhuanzhuan: ['m.zhuanzhuan.com'] }[input.provider] || [];
-    if (!hosts.includes(url.hostname) || seen.has(url.pathname + url.search)) return;
+    const hosts = { suning: ['product.suning.com'], taobao: ['item.taobao.com', 'detail.tmall.com'], nine: ['m2.9ji.com'], xianyu: ['www.goofish.com'], jd: ['item.jd.com'], zhuanzhuan: ['m.zhuanzhuan.com'] }[input.provider] || [];
+    if (!hosts.includes(url.hostname) || url.protocol !== 'https:') return;
+    // Strip tracking parameters so repeated cards across loads remain one sample.
+    if (['taobao', 'xianyu'].includes(input.provider)) {
+      const id = url.searchParams.get('id');
+      if (!id || !/^\d+$/.test(id)) return;
+      url.search = ''; url.searchParams.set('id', id);
+    } else if (['nine', 'jd', 'suning'].includes(input.provider)) url.search = '';
+    url.hash = '';
+    if (seen.has(url.pathname + url.search) || result.items.length >= 100) return;
     seen.add(url.pathname + url.search);
     result.items.push({ title, price, currency: 'CNY', url: url.href, source: input.provider, condition: condition || '' });
   }
@@ -80,6 +88,23 @@
       if (!item || !item.title || !item.itemId || !item.price) continue;
       if (item.sold || item.soldOut || item.isSold) continue;
       add(item.title, item.price, 'https://www.goofish.com/item?id=' + encodeURIComponent(item.itemId), item.condition || '');
+    }
+  } else if (input.provider === 'suning' || input.provider === 'taobao') {
+    const body = document.body?.innerText || '';
+    const suning = input.provider === 'suning';
+    const cards = document.querySelectorAll(suning ? '#product-list .general li.item-wrap' : '[class*="Card--doubleCardWrapper"]');
+    // A normal page header can say 请登录 even when public product cards are available.
+    if (!cards.length && /请登录|登录后查看|滑动验证|安全验证|访问受限/.test(body)) {
+      result.ready = true; result.status = 'restricted'; result.message = '平台要求登录或验证，本次未取得公开报价'; return result;
+    }
+    result.ready = cards.length > 0;
+    for (const card of cards) {
+      const title = card.querySelector(suning ? '.title-selling-point a' : '[class*="Title--title"]');
+      const price = card.querySelector(suning ? '.price-box .def-price' : '[class*="Price--priceText"]');
+      const link = !suning && card.matches?.('a[href*="id="]') ? card : card.querySelector(suning ? '.title-selling-point a' : 'a[href*="id="]');
+      const text = title?.textContent?.trim() || '';
+      if (!title || !price || !link || !/二手|[0-9]成新|[0-9]新/.test(text) || /售罄|已售|下架|券后|补贴后|分期/.test(card.innerText || '')) continue;
+      add(text, price.textContent, link.href, (text.match(/\d+成新|\d+新/) || ['二手'])[0]);
     }
   } else if (input.provider === 'jd') {
     if (location.hostname === 'passport.jd.com') {

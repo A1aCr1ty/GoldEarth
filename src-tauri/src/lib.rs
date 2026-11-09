@@ -41,6 +41,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::music::music_search,
+            commands::music::music_download,
+            commands::music_catalog::music_catalog_search,
+            commands::music_catalog::music_archive_download,
             commands::robotics::robot_feed,
             commands::robotics::robot_collection,
             commands::robotics::robot_sources,

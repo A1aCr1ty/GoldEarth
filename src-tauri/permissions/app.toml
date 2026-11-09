@@ -11,6 +11,10 @@
 identifier = "allow-app-commands"
 description = "App 自己的全部命令，供主窗口使用。"
 commands.allow = [
+  "music_search",
+  "music_download",
+  "music_catalog_search",
+  "music_archive_download",
   "robot_feed",
   "robot_collection",
   "robot_sources",
