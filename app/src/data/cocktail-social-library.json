@@ -1,0 +1,899 @@
+{
+  "version": 1,
+  "collectedAt": "2026-11-12",
+  "description": "批量联网检索整理，非视频全文转录；配方字段仅保留检索可见信息，未补写缺失用量。",
+  "platformStatus": {
+    "小红书": "本轮检索未获得可用原帖链接",
+    "抖音": "已收录公开搜索结果",
+    "Bilibili": "已收录公开搜索结果"
+  },
+  "items": [
+    {
+      "id": "7516731535865842998",
+      "title": "便利店百元调酒：三种搭配",
+      "url": "https://www.douyin.com/video/7516731535865842998",
+      "platform": "抖音",
+      "summary": "介绍乳酸奶混饮、豆沙奶酒与白桃风味三类组合；原帖部分用量用杯中占比表达，未标明杯容量。",
+      "tags": [
+        "便利店",
+        "朗姆",
+        "葡萄",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "BV1VvwHejEBV",
+      "title": "便利店调酒选酒全攻略｜6大基酒之外还有……",
+      "url": "https://www.bilibili.com/video/BV1VvwHejEBV/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、金酒、朗姆、威士忌的选材或入门教程。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "金酒",
+        "朗姆",
+        "威士忌"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7514167564033920275",
+      "title": "占有欲：葡萄汁与伏特加",
+      "url": "https://www.douyin.com/video/7514167564033920275",
+      "platform": "抖音",
+      "summary": "检索可见用量为葡萄汁 40 ml、伏特加 30 ml，水溶C至七分满；杯子容量与制作顺序待核对。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "葡萄",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "BV1xG411K7Ja",
+      "title": "〖便利店调酒〗“ 人均十五元的便利店调酒配方大推荐 一次性可做四款经典鸡尾酒 零浪费不踩雷 ”",
+      "url": "https://www.bilibili.com/video/BV1xG411K7Ja/",
+      "platform": "Bilibili",
+      "summary": "围绕奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7152098232842145062",
+      "title": "三杯便利店金酒混饮",
+      "url": "https://www.douyin.com/video/7152098232842145062",
+      "platform": "抖音",
+      "summary": "作者公开评论提及柑普茶配葡萄汁、茉莉乌龙配苹果醋饮料、葡萄汁配冷萃咖啡三种组合；未给出完整比例。",
+      "tags": [
+        "便利店",
+        "金酒",
+        "茉莉",
+        "柠檬",
+        "葡萄"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "BV1rT421k7uf",
+      "title": "解锁便利店highball新喝法，有手就会",
+      "url": "https://www.bilibili.com/video/BV1rT421k7uf/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、朗姆、椰的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "朗姆",
+        "椰"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7611438679554273189",
+      "title": "便利店调酒，跟好朋友随手diy都很快乐！",
+      "url": "https://www.douyin.com/video/7611438679554273189",
+      "platform": "抖音",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7370007006524083467",
+      "title": "第一次便利店调酒成功！！",
+      "url": "https://www.douyin.com/video/7370007006524083467",
+      "platform": "抖音",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1QUGVzgEcW",
+      "title": "少女心事：乳酸菌果味调酒",
+      "url": "https://www.bilibili.com/video/BV1QUGVzgEcW/",
+      "platform": "Bilibili",
+      "summary": "检索介绍使用养乐多、莓莓桃桃、伏特加和冰，未给出精确用量。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "BV12q4y157HJ",
+      "title": "CrazyQueen便利店调酒（威士忌+维他柠檬茶）",
+      "url": "https://www.bilibili.com/video/BV12q4y157HJ/",
+      "platform": "Bilibili",
+      "summary": "围绕威士忌、柠檬的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "威士忌",
+        "柠檬"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Zj41117ed",
+      "title": "百利甜咖啡奶茶/自制奶酒",
+      "url": "https://www.bilibili.com/video/BV1Zj41117ed/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、伏特加、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "伏特加",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1gHKH6FEhw",
+      "title": "便利店调酒配方到底好不好喝？",
+      "url": "https://www.bilibili.com/video/BV1gHKH6FEhw/",
+      "platform": "Bilibili",
+      "summary": "围绕测评的体验评测。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "配方",
+        "测评"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV13x411Z7FS",
+      "title": "〖调酒教学〗鸡尾酒新手调制教程〖入门级〗",
+      "url": "https://www.bilibili.com/video/BV13x411Z7FS/",
+      "platform": "Bilibili",
+      "summary": "围绕奶、入门的选材或入门教程。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "奶",
+        "入门"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Fa4y1P78i",
+      "title": "最近超级火的便利店调酒 测评711便利店的冰杯配上气泡水和黑朗姆，便利店瞬间变酒吧，网红新喝法get！",
+      "url": "https://www.bilibili.com/video/BV1Fa4y1P78i/",
+      "platform": "Bilibili",
+      "summary": "围绕朗姆、气泡、测评的体验评测。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "朗姆",
+        "气泡",
+        "测评"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7681658272391536986",
+      "title": "六款万能便利店调酒公式~自己在家随便一搭配就 很好喝了~快去试试吧~",
+      "url": "https://www.douyin.com/video/7681658272391536986",
+      "platform": "抖音",
+      "summary": "围绕果立方的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "果立方",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7671302649103133007",
+      "title": "十里红妆：乳酸奶与葡萄气泡",
+      "url": "https://www.douyin.com/video/7671302649103133007",
+      "platform": "抖音",
+      "summary": "检索可见材料包括 AD 钙奶、水溶C、葡萄气泡水和红酒；来源用杯内液面描述比例，未提供毫升数。",
+      "tags": [
+        "葡萄",
+        "奶",
+        "气泡",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7638185019449642249",
+      "title": "三款家庭冰沙鸡尾酒",
+      "url": "https://www.douyin.com/video/7638185019449642249",
+      "platform": "抖音",
+      "summary": "包含茉莉荔枝、菠萝龙舌兰和苹果波本三种方向；需要额外材料或冰沙工具。",
+      "tags": [
+        "金酒",
+        "茉莉",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7615212597423525160",
+      "title": "青提茉莉菲士",
+      "url": "https://www.douyin.com/video/7615212597423525160",
+      "platform": "抖音",
+      "summary": "检索可见茉莉风味江小白 45 ml、葡萄糖浆 20 ml、柠檬汁 20 ml、青提 5–6 颗，最后补气泡水；杯容量待核对。",
+      "tags": [
+        "茉莉",
+        "葡萄",
+        "气泡",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7493915188312165667",
+      "title": "云日松雪：椰青与绿茶特调",
+      "url": "https://www.douyin.com/video/7493915188312165667",
+      "platform": "抖音",
+      "summary": "检索可见金酒 30 ml、椰青 50 ml、泰式绿茶 20 ml，另有茶冻和奶盖，用量不全。",
+      "tags": [
+        "金酒",
+        "椰",
+        "茉莉",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7643104298632498441",
+      "title": "绯色月光：家庭简化版",
+      "url": "https://www.douyin.com/video/7643104298632498441",
+      "platform": "抖音",
+      "summary": "检索可见金酒 15 ml、荔枝汁 30 ml、葡萄汁与茉莉清茶各 50 ml，另加咖啡液与冰；后两者用量未给出。",
+      "tags": [
+        "金酒",
+        "茉莉",
+        "葡萄",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7546596767039573306",
+      "title": "调酒日记🍹《想见你》你有多久没见想见的人了？",
+      "url": "https://www.douyin.com/video/7546596767039573306",
+      "platform": "抖音",
+      "summary": "围绕伏特加、茉莉的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "伏特加",
+        "茉莉",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1jD42157DX",
+      "title": "金汤力好喝的秘密是~ | 屈臣氏汤力水 | 东帝汤力水 | 芬味树汤力水",
+      "url": "https://www.bilibili.com/video/BV1jD42157DX/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、朗姆、椰的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "朗姆",
+        "椰"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV15W411P7zj",
+      "title": "【马蹄厨房】今年世界杯，为你准备32款肥宅欢乐水，总有一款你喜欢",
+      "url": "https://www.bilibili.com/video/BV15W411P7zj/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1kV4y1E7dY",
+      "title": "花椒调酒尝试一下吗，不说后无来者至少前无古人|自制饮品|江小白|果立方|花椒|茶叶|酒吧|鸡尾酒||制作教程|美食",
+      "url": "https://www.bilibili.com/video/BV1kV4y1E7dY/",
+      "platform": "Bilibili",
+      "summary": "围绕果立方的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "果立方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1yypwecEaN",
+      "title": "『居家调酒』伯牙绝弦微醺版，有手就会",
+      "url": "https://www.bilibili.com/video/BV1yypwecEaN/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、朗姆、茉莉、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "朗姆",
+        "茉莉",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1N34y1v7AV",
+      "title": "宿舍沉浸式调酒｜冰红茶威士忌🥃史上最简单调酒攻略🛎｜不到十块get调酒快乐✅",
+      "url": "https://www.bilibili.com/video/BV1N34y1v7AV/",
+      "platform": "Bilibili",
+      "summary": "围绕威士忌的选材或入门教程。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "威士忌"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV12f4y1X7f5",
+      "title": "【假装度假】之 椰椰椰椰子味夏日调酒大合集！椰子水椰汁椰奶椰浆+++ 在家一杯到海岛~",
+      "url": "https://www.bilibili.com/video/BV12f4y1X7f5/",
+      "platform": "Bilibili",
+      "summary": "围绕椰、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "椰",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Sd4y1c7qM",
+      "title": "居家调酒：爆柠椰椰茉莉酒我的白月光神酒，我只喝亿杯 柠檬汁的清香和椰奶的奶香加一起甜而不腻，真是小清新的n次方",
+      "url": "https://www.bilibili.com/video/BV1Sd4y1c7qM/",
+      "platform": "Bilibili",
+      "summary": "围绕椰、茉莉、柠檬、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "椰",
+        "茉莉",
+        "柠檬",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1jK1BYpEVm",
+      "title": "今天教你六款超好喝劲酒调酒",
+      "url": "https://www.bilibili.com/video/BV1jK1BYpEVm/",
+      "platform": "Bilibili",
+      "summary": "围绕柠檬、奶、劲酒的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "柠檬",
+        "奶",
+        "劲酒"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1aB4y1o7R8",
+      "title": "鸡尾酒界中的冰红茶:大吉岭酷乐darjeeling cooler",
+      "url": "https://www.bilibili.com/video/BV1aB4y1o7R8/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7619701980609166735",
+      "title": "He / Her：牛奶与蓝色果汁分层",
+      "url": "https://www.douyin.com/video/7619701980609166735",
+      "platform": "抖音",
+      "summary": "材料涉及旺仔牛奶、蓝橙、朗姆、伏特加、橙汁和冰；原摘要未列精确用量。",
+      "tags": [
+        "伏特加",
+        "朗姆",
+        "橙汁",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7379967285856898345",
+      "title": "椰林飘香：椰奶菠萝组合",
+      "url": "https://www.douyin.com/video/7379967285856898345",
+      "platform": "抖音",
+      "summary": "检索可见白朗姆与马利宝各 30 ml、椰奶与菠萝汁各 80 ml；具体工具和操作需观看原视频。",
+      "tags": [
+        "朗姆",
+        "椰",
+        "奶",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "BV1Ds4y117Ye",
+      "title": "自制饮品｜便利店懒人调酒公式、好喝不踩雷",
+      "url": "https://www.bilibili.com/video/BV1Ds4y117Ye/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1ScGt6bEZE",
+      "title": "🏪便利店调酒『青提茉莉朗姆』高颜值小甜酒",
+      "url": "https://www.bilibili.com/video/BV1ScGt6bEZE/",
+      "platform": "Bilibili",
+      "summary": "围绕朗姆、茉莉的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "朗姆",
+        "茉莉"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Pd4y1J7nu",
+      "title": "第2期｜这5杯便利店调酒！真想让你们尝尝！",
+      "url": "https://www.bilibili.com/video/BV1Pd4y1J7nu/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1n14y1H7sY",
+      "title": "便利店调酒新公式|烧酒的4种神仙喝法",
+      "url": "https://www.bilibili.com/video/BV1n14y1H7sY/",
+      "platform": "Bilibili",
+      "summary": "围绕烧酒的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "烧酒"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7680866619471432969",
+      "title": "玫瑰情人：花香气泡调酒",
+      "url": "https://www.douyin.com/video/7680866619471432969",
+      "platform": "抖音",
+      "summary": "检索可见基酒烟小飘 15 ml、蝶豆花汁 10 ml，另用雪碧、玫瑰与冰；部分用量仅写少许。",
+      "tags": [
+        "气泡",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "partial"
+    },
+    {
+      "id": "7532816994468629817",
+      "title": "一期搞懂汾酒调酒到底好不好喝⁉️少走弯路‼️",
+      "url": "https://www.douyin.com/video/7532816994468629817",
+      "platform": "抖音",
+      "summary": "围绕金酒、柠檬、劲酒的体验评测。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "金酒",
+        "柠檬",
+        "劲酒",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7539184246273314107",
+      "title": "30秒学会邓紫棋同款“银色漩涡”鸡尾酒",
+      "url": "https://www.douyin.com/video/7539184246273314107",
+      "platform": "抖音",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7652937979384063603",
+      "title": "把蓝色留给天空，把悲伤留给伤悲",
+      "url": "https://www.douyin.com/video/7652937979384063603",
+      "platform": "抖音",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "7560876938513894699",
+      "title": "没有茶的茶，还能让你上头的茶，真的挺好喝的",
+      "url": "https://www.douyin.com/video/7560876938513894699",
+      "platform": "抖音",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1EDPxezEGj",
+      "title": "不正经调酒9-高潮",
+      "url": "https://www.bilibili.com/video/BV1EDPxezEGj/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、威士忌、茉莉的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "威士忌",
+        "茉莉"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1GZ421u7DH",
+      "title": "『居家调酒』我的舌头高潮了",
+      "url": "https://www.bilibili.com/video/BV1GZ421u7DH/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、橙汁的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "橙汁",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1xD4y1B7dV",
+      "title": "事后烟Cigarettes After Sex 微醺 调酒",
+      "url": "https://www.bilibili.com/video/BV1xD4y1B7dV/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、威士忌的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "威士忌",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1e3411b7HH",
+      "title": "百利甜调酒！成年人的奶茶$",
+      "url": "https://www.bilibili.com/video/BV1e3411b7HH/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Nz42187Uz",
+      "title": "特调鸡尾酒｜陷入温柔的少女百利甜",
+      "url": "https://www.bilibili.com/video/BV1Nz42187Uz/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1hQ4y147dQ",
+      "title": "调酒日记 Day6【威士忌绒毛】",
+      "url": "https://www.bilibili.com/video/BV1hQ4y147dQ/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜、威士忌、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜",
+        "威士忌",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV19WBGYbE17",
+      "title": "冻冻&可可糕 |冬天很需要杯微醺版提拉米苏（命名小天才再次上线）",
+      "url": "https://www.bilibili.com/video/BV19WBGYbE17/",
+      "platform": "Bilibili",
+      "summary": "围绕百利甜的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "百利甜"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1uV4y1P7V1",
+      "title": "【经典调酒】橙花 - 轻盈不做作的金酒橙汁（Orange Blossom）| 鸡尾酒 | 酒吧 | 调酒师",
+      "url": "https://www.bilibili.com/video/BV1uV4y1P7V1/",
+      "platform": "Bilibili",
+      "summary": "围绕金酒、橙汁的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "金酒",
+        "橙汁"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1t5sZzxEaK",
+      "title": "在家打造高性价比Home Bar🍸｜附经典调酒配方",
+      "url": "https://www.bilibili.com/video/BV1t5sZzxEaK/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、金酒、朗姆、威士忌的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "伏特加",
+        "金酒",
+        "朗姆",
+        "威士忌",
+        "柠檬",
+        "橙汁",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1fz421Q7Hx",
+      "title": "沉浸式调酒 | 一见钟情  伏特加+金酒+水溶C",
+      "url": "https://www.bilibili.com/video/BV1fz421Q7Hx/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、金酒、橙汁的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "伏特加",
+        "金酒",
+        "橙汁"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1Ro4y187qz",
+      "title": "上田和男的日式“墨西哥湾流”鸡尾酒|你更喜欢哪个版本？",
+      "url": "https://www.bilibili.com/video/BV1Ro4y187qz/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1fR4y1C73w",
+      "title": "12款世界经典鸡尾酒下篇｜调酒入门必备｜酒吧点酒攻略",
+      "url": "https://www.bilibili.com/video/BV1fR4y1C73w/",
+      "platform": "Bilibili",
+      "summary": "围绕入门的选材或入门教程。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "入门"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1aF411A7iL",
+      "title": "世界上最简单的调酒方案是什么？当然是放弃苏打水用雪碧啊！柠檬红茶谁会不喜欢呢？逛街喝奶茶已经out了，试试这个有手就行！",
+      "url": "https://www.bilibili.com/video/BV1aF411A7iL/",
+      "platform": "Bilibili",
+      "summary": "围绕金酒、柠檬、奶的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "金酒",
+        "柠檬",
+        "奶"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1YedNYnESM",
+      "title": "手把手教你在家实现金桔芬达汽水自由，还能调酒百搭",
+      "url": "https://www.bilibili.com/video/BV1YedNYnESM/",
+      "platform": "Bilibili",
+      "summary": "围绕柠檬的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "柠檬"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1oY3y6mEMu",
+      "title": "「便利店调酒」上海出差，水上晚酌，两杯劲酒特调，放松惬意～",
+      "url": "https://www.bilibili.com/video/BV1oY3y6mEMu/",
+      "platform": "Bilibili",
+      "summary": "围绕劲酒的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "劲酒"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1N2eq6KEEy",
+      "title": "晚风｜果香柔和居家调酒 果香很突出的一款，葡萄的蜜甜中和柠檬的酸，酸甜度平衡，入口顺滑好接受。",
+      "url": "https://www.bilibili.com/video/BV1N2eq6KEEy/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、柠檬、葡萄的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "伏特加",
+        "柠檬",
+        "葡萄"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1XY8c6eEK5",
+      "title": "桃之夭夭｜3种材料，零手法搞定粉色渐变特调",
+      "url": "https://www.bilibili.com/video/BV1XY8c6eEK5/",
+      "platform": "Bilibili",
+      "summary": "围绕朗姆、柠檬的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "朗姆",
+        "柠檬",
+        "配方"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1L8gSzGEwu",
+      "title": "报告：女巫的毒药解药版",
+      "url": "https://www.bilibili.com/video/BV1L8gSzGEwu/",
+      "platform": "Bilibili",
+      "summary": "围绕家庭混饮的调酒演示。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    },
+    {
+      "id": "BV1h4NczHEvN",
+      "title": "无色无味，却能成为便利店调酒的万能基酒？ 绝对伏特加，酒吧必备",
+      "url": "https://www.bilibili.com/video/BV1h4NczHEvN/",
+      "platform": "Bilibili",
+      "summary": "围绕伏特加、威士忌的选材或入门教程。已收录搜索线索，详细材料和制作顺序需查看原帖。",
+      "tags": [
+        "便利店",
+        "伏特加",
+        "威士忌"
+      ],
+      "collectedAt": "2026-11-12",
+      "verification": "search-index",
+      "recipeStatus": "link-only"
+    }
+  ]
+}

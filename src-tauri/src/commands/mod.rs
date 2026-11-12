@@ -1,3 +1,4 @@
+pub mod cocktails;
 pub mod agents;
 pub mod archify;
 pub mod categories;

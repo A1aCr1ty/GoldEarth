@@ -10,7 +10,7 @@ import {
   writeJson,
 } from "@/lib/sidebar";
 import {
-  ChefHat, Dumbbell, Bot, BookOpen, Building2, Car, Compass, FileText, FolderTree, Gem, LayoutDashboard,
+  Martini, ChefHat, Dumbbell, Bot, BookOpen, Building2, Car, Compass, FileText, FolderTree, Gem, LayoutDashboard,
   Network, Search, Settings as SettingsIcon, Tags, TrendingUp, CircleDot, Music2, Wallet,
 } from "lucide-react";
 
@@ -32,6 +32,7 @@ const ICONS: Record<SidebarIconName, typeof Compass> = {
   basketball: CircleDot,
   music: Music2,
   account: Wallet,
+  cocktail: Martini,
   recipe: ChefHat,
   workout: Dumbbell,
 };

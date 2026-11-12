@@ -1,0 +1,22 @@
+[
+  {
+    "idDrink": "12162",
+    "strDrink": "Screwdriver",
+    "strDrinkThumb": "https://www.thecocktaildb.com/images/media/drink/8xnyke1504352207.jpg"
+  },
+  {
+    "idDrink": "11288",
+    "strDrink": "Cuba Libre",
+    "strDrinkThumb": "https://www.thecocktaildb.com/images/media/drink/wmkbfj1606853905.jpg"
+  },
+  {
+    "idDrink": "11403",
+    "strDrink": "Gin And Tonic",
+    "strDrinkThumb": "https://www.thecocktaildb.com/images/media/drink/k0508k1668422436.jpg"
+  },
+  {
+    "idDrink": "17205",
+    "strDrink": "Mimosa",
+    "strDrinkThumb": "https://www.thecocktaildb.com/images/media/drink/juhcuu1504370685.jpg"
+  }
+]
