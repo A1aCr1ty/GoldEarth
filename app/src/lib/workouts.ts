@@ -45,7 +45,14 @@ export const exercises: Exercise[] = [
   { id: "split", name: "保加利亚分腿蹲", muscle: "腿部", equipment: "哑铃", cue: "后脚脚尖搭在稳固凳面，前脚支撑下蹲再站起；没有凳子时后脚点地即可。左右分开计数。", steps: ["后脚脚尖放在不会滑动的凳面上，前脚向前站稳。", "双手持哑铃垂于身侧，屈前膝下蹲到可控深度。", "前脚发力站起，保持躯干稳定，再换另一侧。"], breathing: "下蹲吸气，站起呼气。", mistake: "避免前膝内扣、凳子滑动和后膝砸地。" },
   { id: "step", name: "哑铃上台阶", muscle: "腿部", equipment: "哑铃", cue: "一脚踩上稳固台阶站直，再缓慢踏下；台阶大约到膝下方，左右分开计数。", steps: ["面对不会滑动的台阶或训练凳，双手持哑铃。", "整只脚踩上台阶，用这条腿站直，另一脚跟上。", "缓慢踏回地面，再换另一侧。"], breathing: "踏上呼气，踏下吸气。", mistake: "避免台阶过高或滑动、用摆腿惯性蹬起和膝盖内扣。" },
 ];
-export const routines = [
+export interface WorkoutRoutine {
+  name: string;
+  description: string;
+  ids: string[];
+  sets?: number;
+  reps?: Record<string, number>;
+}
+export const routines: WorkoutRoutine[] = [
   { name: "居家全身", description: "徒手 · 腿 / 胸 / 臀 / 核心", ids: ["squat", "pushup", "bridge", "plank"] },
   { name: "上肢力量", description: "哑铃 · 胸 / 背 / 肩 / 手臂", ids: ["bench", "row", "press", "curl"] },
   { name: "下肢与核心", description: "哑铃 + 徒手 · 腿 / 臀 / 核心", ids: ["goblet", "rdl", "bridge", "deadbug"] },
@@ -53,17 +60,145 @@ export const routines = [
   { name: "核心巩固", description: "徒手 · 核心 / 背 / 臀", ids: ["crunch", "revcrunch", "superman", "slbridge"] },
   { name: "哑铃肩臂", description: "哑铃 · 肩 / 手臂", ids: ["lateral", "rear", "hammer", "kickback"] },
   { name: "下肢进阶", description: "哑铃 · 腿 / 分腿蹲 / 台阶", ids: ["split", "step", "calf", "lunge"] },
+  { name: "心肺快走", description: "低冲击有氧 · 舒适节奏 30 分钟", ids: ["walk"], sets: 1, reps: { walk: 1800 } },
+  { name: "低冲击全身", description: "徒手 · 心肺 / 臀 / 核心 / 背", ids: ["walk", "bridge", "deadbug", "superman"], sets: 2, reps: { walk: 600 } },
 ];
-export interface WorkoutSet { id: string; exerciseId: string; load: number; reps: number; done: boolean }
+export interface WorkoutSet { id: string; exerciseId: string; load: number; reps: number; done: boolean; rir?: number; pr?: string[] }
 export interface Workout { id: string; name: string; started: number; ended?: number; sets: WorkoutSet[] }
-export interface GymData { active: Workout | null; history: Workout[]; weights: { date: string; kg: number }[]; restUntil: number; plan: string[] }
-export const emptyGym: GymData = { active: null, history: [], weights: [], restUntil: 0, plan: ["居家全身", "休息", "上肢力量", "休息", "下肢与核心", "休息", "休息"] };
-export function makeSet(exerciseId: string): WorkoutSet {
-  return { id: crypto.randomUUID(), exerciseId, load: 0, reps: exercises.find(e => e.id === exerciseId)?.timed ? 30 : 10, done: false };
+export interface WorkoutProfile {
+  heightCm: number;
+  weightKg: number;
+  bmi: number;
+  category: string;
+  goal: string;
+  advice: string;
+  generatedAt: string;
+}
+export interface GymData { active: Workout | null; history: Workout[]; weights: { date: string; kg: number }[]; restUntil: number; plan: string[]; profile?: WorkoutProfile | null; targetWeight?: number | null }
+export const emptyGym: GymData = { active: null, history: [], weights: [], restUntil: 0, plan: ["居家全身", "休息", "上肢力量", "休息", "下肢与核心", "休息", "休息"], profile: null, targetWeight: null };
+export function createWorkoutPlan(heightCm: number, weightKg: number, generatedAt = new Date()): { profile: WorkoutProfile; plan: string[] } {
+  if (!Number.isFinite(heightCm) || heightCm < 80 || heightCm > 250) throw new Error("请输入 80～250 cm 之间的身高。");
+  if (!Number.isFinite(weightKg) || weightKg < 20 || weightKg > 500) throw new Error("请输入 20～500 kg 之间的体重。");
+  const bmiValue = weightKg / ((heightCm / 100) ** 2);
+  const bmi = Number(bmiValue.toFixed(1));
+  const base = { heightCm, weightKg, bmi, generatedAt: generatedAt.toISOString() };
+  if (bmiValue < 18.5) return {
+    profile: { ...base, category: "偏低", goal: "增肌与基础体能", advice: "每周 3 次力量训练，动作稳定后逐渐增加次数或负重，并保证充足饮食与睡眠。" },
+    plan: ["居家全身", "休息", "上肢力量", "休息", "下肢与核心", "休息", "休息"],
+  };
+  if (bmiValue < 24) return {
+    profile: { ...base, category: "正常", goal: "均衡力量与心肺", advice: "每周 3 次力量训练、1 次舒适节奏快走；训练之间留出恢复时间。" },
+    plan: ["居家全身", "心肺快走", "休息", "上肢力量", "休息", "下肢与核心", "休息"],
+  };
+  if (bmiValue < 28) return {
+    profile: { ...base, category: "超重", goal: "低冲击减脂与体能", advice: "从可轻松完成的低冲击训练开始，每周 2 次全身训练、1 次快走，再按体感逐步增加时长。" },
+    plan: ["低冲击全身", "休息", "心肺快走", "休息", "低冲击全身", "休息", "休息"],
+  };
+  return {
+    profile: { ...base, category: "肥胖", goal: "低冲击活动与习惯建立", advice: "先建立规律活动习惯，以舒适快走和低冲击动作为主；如有关节疼痛、胸闷或眩晕，请停止并咨询医生。" },
+    plan: ["心肺快走", "休息", "低冲击全身", "休息", "休息", "心肺快走", "休息"],
+  };
+}
+export function makeSet(exerciseId: string, reps?: number, load = 0): WorkoutSet {
+  return { id: crypto.randomUUID(), exerciseId, load, reps: reps ?? (exercises.find(e => e.id === exerciseId)?.timed ? 30 : 10), done: false };
 }
 export function volume(sets: WorkoutSet[]) {
   return sets.filter(s => s.done && !exercises.find(e => e.id === s.exerciseId)?.timed).reduce((sum, s) => sum + s.load * s.reps, 0);
 }
 export function validSet(s: WorkoutSet) {
-  return Number.isFinite(s.load) && s.load >= 0 && s.load <= 1000 && Number.isInteger(s.reps) && s.reps > 0 && s.reps <= 86400;
+  return Number.isFinite(s.load) && s.load >= 0 && s.load <= 1000 && Number.isInteger(s.reps) && s.reps > 0 && s.reps <= 86400 && (s.rir === undefined || (Number.isInteger(s.rir) && s.rir >= 0 && s.rir <= 10));
+}
+export function latestExerciseSets(exerciseId: string, history: Workout[]): WorkoutSet[] {
+  const workout = [...history].sort((a, b) => b.started - a.started).find(w => w.sets.some(s => s.exerciseId === exerciseId && s.done));
+  return workout?.sets.filter(s => s.exerciseId === exerciseId && s.done) ?? [];
+}
+export function estimateOneRepMax(set: WorkoutSet): number {
+  const exercise = exercises.find(e => e.id === set.exerciseId);
+  if (exercise?.timed || set.load <= 0 || set.reps <= 0) return 0;
+  return set.load * (1 + set.reps / 30);
+}
+export function personalRecords(candidate: WorkoutSet, history: Workout[]): string[] {
+  if (!validSet(candidate)) return [];
+  const previous = history.flatMap(w => w.sets).filter(s => s.done && s.exerciseId === candidate.exerciseId);
+  if (!previous.length) return [];
+  const exercise = exercises.find(e => e.id === candidate.exerciseId);
+  if (exercise?.timed) return candidate.reps > Math.max(...previous.map(s => s.reps)) ? ["时长"] : [];
+  const records: string[] = [];
+  if (candidate.load > 0 && candidate.load > Math.max(...previous.map(s => s.load))) records.push("重量");
+  const oneRepMax = estimateOneRepMax(candidate);
+  if (oneRepMax > 0 && oneRepMax > Math.max(...previous.map(estimateOneRepMax))) records.push("估算 1RM");
+  const bodyweight = previous.filter(s => s.load === 0);
+  if (candidate.load === 0 && bodyweight.length && candidate.reps > Math.max(...bodyweight.map(s => s.reps))) records.push("次数");
+  return records;
+}
+export function progressionSuggestion(exerciseId: string, history: Workout[]): string {
+  const latest = latestExerciseSets(exerciseId, history);
+  if (!latest.length) return "完成本次后将生成下次目标";
+  const exercise = exercises.find(e => e.id === exerciseId);
+  const maxReps = Math.max(...latest.map(s => s.reps));
+  if (exercise?.timed) return `下次目标：${maxReps + 10} 秒，姿势失控就提前结束`;
+  const maxLoad = Math.max(...latest.map(s => s.load));
+  if (maxLoad === 0) return `下次目标：稳定完成 ${maxReps + 1} 次`;
+  const minReps = Math.min(...latest.map(s => s.reps));
+  if (minReps >= 12) return `下次目标：${maxLoad + 2.5} kg × ${latest[0].reps} 次`;
+  if (minReps < 8) return `下次目标：先用 ${maxLoad} kg 稳定完成 8 次`;
+  return `下次目标：${maxLoad} kg × ${maxReps + 1} 次`;
+}
+export interface LiftProgress { exercise: Exercise; oneRepMax: number; load: number; reps: number; date: number }
+export function bestLifts(history: Workout[]): LiftProgress[] {
+  const best = new Map<string, LiftProgress>();
+  for (const workout of history) for (const set of workout.sets) {
+    if (!set.done) continue;
+    const exercise = exercises.find(e => e.id === set.exerciseId);
+    const oneRepMax = estimateOneRepMax(set);
+    if (!exercise || exercise.timed || !oneRepMax) continue;
+    if ((best.get(exercise.id)?.oneRepMax ?? 0) < oneRepMax) best.set(exercise.id, { exercise, oneRepMax, load: set.load, reps: set.reps, date: workout.started });
+  }
+  return Array.from(best.values()).sort((a, b) => b.oneRepMax - a.oneRepMax);
+}
+export interface MuscleTraining { muscle: string; sets: number; volume: number }
+export function muscleTraining(history: Workout[], days = 30, now = new Date()): MuscleTraining[] {
+  const cutoff = new Date(now); cutoff.setHours(0, 0, 0, 0); cutoff.setDate(cutoff.getDate() - days + 1);
+  const result = new Map<string, MuscleTraining>();
+  for (const workout of history) {
+    if (workout.started < cutoff.getTime()) continue;
+    for (const set of workout.sets) {
+      if (!set.done) continue;
+      const exercise = exercises.find(e => e.id === set.exerciseId);
+      if (!exercise) continue;
+      const current = result.get(exercise.muscle) ?? { muscle: exercise.muscle, sets: 0, volume: 0 };
+      current.sets += 1;
+      if (!exercise.timed) current.volume += set.load * set.reps;
+      result.set(exercise.muscle, current);
+    }
+  }
+  return Array.from(result.values()).sort((a, b) => b.sets - a.sets || b.volume - a.volume);
+}
+export interface TrainingDay { date: string; sets: number; level: number }
+export function trainingCalendar(history: Workout[], weeks = 52, now = new Date()): TrainingDay[] {
+  const setsByDate = new Map<string, number>();
+  for (const workout of history) {
+    const date = new Date(workout.started).toLocaleDateString("sv-SE");
+    setsByDate.set(date, (setsByDate.get(date) ?? 0) + workout.sets.filter(s => s.done).length);
+  }
+  const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - start.getDay() - (weeks - 1) * 7);
+  return Array.from({ length: weeks * 7 }, (_, index) => {
+    const day = new Date(start); day.setDate(start.getDate() + index);
+    const date = day.toLocaleDateString("sv-SE");
+    const sets = setsByDate.get(date) ?? 0;
+    return { date, sets, level: sets === 0 ? 0 : sets < 4 ? 1 : sets < 8 ? 2 : 3 };
+  });
+}
+function csvCell(value: string | number): string {
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+export function gymToCsv(data: GymData): string {
+  const rows: (string | number)[][] = [["记录类型", "日期", "训练", "动作", "组号", "次数", "秒数", "负重kg", "RIR", "容量kg", "体重kg"]];
+  for (const workout of data.history) workout.sets.forEach((set, index) => {
+    const exercise = exercises.find(e => e.id === set.exerciseId);
+    rows.push(["训练", new Date(workout.started).toLocaleDateString("sv-SE"), workout.name, exercise?.name ?? set.exerciseId, index + 1, exercise?.timed ? "" : set.reps, exercise?.timed ? set.reps : "", set.load, set.rir ?? "", exercise?.timed ? 0 : set.load * set.reps, ""]);
+  });
+  for (const weight of data.weights) rows.push(["体重", weight.date, "", "", "", "", "", "", "", "", weight.kg]);
+  return rows.map(row => row.map(csvCell).join(",")).join("\r\n");
 }
