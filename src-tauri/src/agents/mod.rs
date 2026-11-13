@@ -124,6 +124,28 @@ fn resolve_program(program: &str, bin_path: Option<&str>) -> PathBuf {
 
 #[cfg(all(test, windows))]
 mod tests {
+    #[test]
+    fn kimi_messages_extract_only_assistant_text() {
+        let result = super::parse_codex_output(r#"{"role":"assistant","content":"分析结果"}
+{"role":"tool","content":"private tool output"}
+{"role":"assistant","content":[{"type":"text","text":"后续计划"},{"type":"thinking","text":"hidden"}]}"#);
+        assert_eq!(result.messages, vec!["分析结果", "后续计划"]);
+    }
+
+    #[test]
+    fn kimi_resume_hint_is_metadata() {
+        let result = super::parse_codex_line(r#"{"role":"meta","type":"session.resume_hint","session_id":"session_test"}"#);
+        assert_eq!(result.session_id.as_deref(), Some("session_test"));
+        assert!(result.text.is_none());
+    }
+
+    #[test]
+    fn kimi_kind_round_trips() {
+        let kind: crate::db::models::AgentKind = serde_json::from_str("\"kimi\"").unwrap();
+        assert_eq!(kind, crate::db::models::AgentKind::Kimi);
+        assert_eq!(serde_json::to_string(&kind).unwrap(), "\"kimi\"");
+    }
+
     use super::*;
 
     #[test]
@@ -908,7 +930,7 @@ pub fn build_command(
     bin_path: Option<&str>,
     work_dir: Option<&std::path::Path>,
 ) -> Command {
-    let program = resolve_program(&agent.command, bin_path);
+    let program = resolve_program(&agent.command, if agent.kind == crate::db::models::AgentKind::Kimi { None } else { bin_path });
 
     let mut args: Vec<String> = Vec::with_capacity(agent.args.len() + 2);
     let mut has_placeholder = false;
@@ -929,6 +951,7 @@ pub fn build_command(
         ensure_codex_flags(&mut args);
     }
     if !has_placeholder {
+        if agent.kind == crate::db::models::AgentKind::Kimi && !args.iter().any(|a| a == "--prompt" || a == "-p") { args.push("--prompt".into()); }
         args.push(prompt.to_string());
     }
 
@@ -1017,6 +1040,19 @@ pub fn parse_codex_line(line: &str) -> CodexLine {
     };
 
     let mut out = CodexLine::default();
+    // Kimi stream-json uses assistant/tool messages instead of Codex events.
+    if let Some(role) = v.get("role").and_then(|r| r.as_str()) {
+        if role == "meta" && v.get("type").and_then(|t| t.as_str()) == Some("session.resume_hint") {
+            out.session_id = v.get("session_id").and_then(|s| s.as_str()).map(str::to_owned);
+        }
+        if role == "assistant" {
+            out.text = v.get("content").and_then(|c| c.as_str()).map(str::to_owned)
+                .or_else(|| v.get("content").and_then(|c| c.as_array()).map(|parts| parts.iter()
+                    .filter(|p| p.get("type").and_then(|t| t.as_str()) == Some("text"))
+                    .filter_map(|p| p.get("text").and_then(|t| t.as_str())).collect::<Vec<_>>().join("")));
+        }
+        return out;
+    }
     let kind = v.get("type").and_then(|t| t.as_str()).unwrap_or_default();
     let item = v.get("item");
     match kind {
@@ -1243,6 +1279,9 @@ pub fn spawn_run<F>(
     let resume_from = run_record.session_id.clone();
     let mut working_agent = agent.clone();
     if let Some(sid) = resume_from.as_deref().filter(|s| !s.is_empty()) {
+        if working_agent.kind == crate::db::models::AgentKind::Kimi {
+            working_agent.args.splice(0..0, ["--session".to_string(), sid.to_string()]);
+        }
         let is_codex_exec = working_agent.kind == crate::db::models::AgentKind::Codex
             && working_agent.args.first().map(|a| a.as_str()) == Some("exec");
         if is_codex_exec && !working_agent.args.iter().any(|a| a == "resume") {

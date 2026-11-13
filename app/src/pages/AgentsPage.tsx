@@ -34,14 +34,14 @@ export default function AgentsPage() {
   function openEdit(a: Agent) {
     setEditing(a);
     setName(a.name); setKind(a.kind); setCommand(a.command);
-    setArgs((a.kind === "codex" ? withoutAgentModel(a.args) : a.args).join(" ")); setModel(a.kind === "codex" ? readAgentModel(a.args) : ""); setDescription(a.description ?? "");
+    setArgs((a.kind !== "custom" ? withoutAgentModel(a.args) : a.args).join(" ")); setModel(a.kind !== "custom" ? readAgentModel(a.args) : ""); setDescription(a.description ?? "");
     setOpen(true);
   }
   async function handleSave() {
     if (!name.trim() || !command.trim()) return;
     const payload = {
       name: name.trim(), kind, command: command.trim(),
-      args: kind === "codex" ? withAgentModel(args.split(/\s+/).filter(Boolean), model) : args.split(/\s+/).filter(Boolean),
+      args: kind !== "custom" ? withAgentModel(args.split(/\s+/).filter(Boolean), model) : args.split(/\s+/).filter(Boolean),
       description: description.trim() || undefined, enabled: true,
     };
     if (editing) await update(editing.id, payload);
@@ -92,23 +92,24 @@ export default function AgentsPage() {
             </DialogHeader>
             <div className="space-y-3">
               <Input placeholder="名称（如：Codex CLI）" value={name} onChange={(e) => setName(e.target.value)} />
-              <Select value={kind} onValueChange={(v) => setKind(v as AgentKind)}>
+              <Select value={kind} onValueChange={(v) => { setKind(v as AgentKind); setModel(""); if (v === "kimi") { setCommand("kimi"); setArgs("--output-format stream-json --prompt {prompt}"); } else if (v === "codex") { setCommand("codex"); setArgs(CODEX_DEFAULT_ARGS); } }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="codex">Codex</SelectItem>
+                  <SelectItem value="kimi">Kimi Code</SelectItem>
                   <SelectItem value="custom">自定义</SelectItem>
                 </SelectContent>
               </Select>
               <Input placeholder="可执行命令" value={command} onChange={(e) => setCommand(e.target.value)} />
-              {kind === "codex" && <div className="space-y-1.5"><Input aria-label="Codex 模型" placeholder="模型（选填，例如 gpt-6-luna）" value={model} onChange={(e) => setModel(e.target.value)} /><p className="text-xs text-muted-foreground">留空继承 Codex CLI 配置。填写后仅覆盖这个 Agent 的模型；实际可用性取决于登录账号和 CLI 版本。</p></div>}
+              {kind !== "custom" && <div className="space-y-1.5"><Input aria-label="Agent 模型" placeholder="模型（选填，例如 gpt-6-luna）" value={model} onChange={(e) => setModel(e.target.value)} /><p className="text-xs text-muted-foreground">留空继承所选 CLI 配置。填写后仅覆盖这个 Agent 的模型；实际可用性取决于登录账号和 CLI 版本。</p></div>}
               <div className="space-y-1.5">
                 <Input placeholder="参数（空格分隔，使用 {prompt} 作为占位符）" value={args} onChange={(e) => setArgs(e.target.value)} />
                 <p className="text-xs text-muted-foreground">
-                  不写 <code>{"{prompt}"}</code> 时，prompt 会自动作为最后一个参数追加。
+                  {kind === "kimi" ? <>请先安装并登录 Kimi Code CLI。默认使用 --prompt 和 stream-json；模型留空继承 CLI 配置。非交互模式会自动处理工具调用，请仅在可信目录运行。</> : <>不写 <code>{"{prompt}"}</code> 时，prompt 会自动作为最后一个参数追加。
                   Codex 的用法是 <code>codex exec [PROMPT]</code>，prompt 是位置参数，
                   参数填 <code>exec --skip-git-repo-check</code>，不要写成 <code>exec --prompt</code>。
                   运行目录不是 git 仓库时 Codex 会以 “Not inside a trusted directory” 拒绝执行，
-                  <code>--skip-git-repo-check</code> 就是解这个的，漏填时 App 也会自动补上。
+                  <code>--skip-git-repo-check</code> 就是解这个的，漏填时 App 也会自动补上。</>}
                 </p>
               </div>
               <Textarea placeholder="说明（可选）" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
@@ -129,7 +130,7 @@ export default function AgentsPage() {
                 <Card className="border-dashed">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Bot className="h-4 w-4" /> 还没有 Agent</CardTitle>
-                    <CardDescription>新建一个来调用本地的 Codex CLI。</CardDescription>
+                    <CardDescription>新建一个来调用本地的 Codex CLI 或 Kimi Code。</CardDescription>
                   </CardHeader>
                 </Card>
               )}

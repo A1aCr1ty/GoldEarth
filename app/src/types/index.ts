@@ -36,7 +36,7 @@ export interface Note {
   /** 文件在磁盘上的最后修改时间，用于检测是否被外部 Agent 改动 */
   modified?: string;
 }
-export type AgentKind = "codex" | "custom";
+export type AgentKind = "codex" | "kimi" | "custom";
 export interface Agent {
   id: string;
   name: string;

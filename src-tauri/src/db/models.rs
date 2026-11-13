@@ -60,6 +60,7 @@ pub struct Note {
 #[serde(rename_all = "lowercase")]
 pub enum AgentKind {
     Codex,
+    Kimi,
     Custom,
 }
 
