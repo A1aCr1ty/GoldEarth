@@ -47,6 +47,7 @@ export const NAV_TREE: SidebarGroup[] = [
       { to: "/cocktails", label: "便利店调酒", icon: "cocktail", hint: "简单配方、制作步骤与成品照片" },
       { to: "/recipes", label: "家常食谱", icon: "recipe", hint: "食材配方、人数换算与详细做法" },
       { to: "/workout", label: "锻炼", icon: "workout", hint: "训练计划、动作库、逐组记录与休息计时" },
+      { to: "/bilibili", label: "Bilibili", icon: "compass", hint: "UP 主动态与评论" },
       { to: "/music", label: "音乐", icon: "music", hint: "本地音乐、收藏与音乐播放" },
       { to: "/nba", label: "NBA", icon: "basketball", hint: "赛程、技术统计、新闻与关注球队的虎扑专区" },
       { to: "/robotics", label: "机器人推送", icon: "bot", hint: "整机、零部件、算法与系统更新，收藏整理资料" },

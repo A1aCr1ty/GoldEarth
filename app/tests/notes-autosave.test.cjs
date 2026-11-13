@@ -236,3 +236,30 @@ test('the actual notes store acknowledges each saved version before notifying su
     assert.equal(notifications, 5);
   } finally { unsubscribe(); }
 });
+
+test('save shortcuts flush drafts for Control and Command', async () => {
+  for (const modifier of ['ctrlKey', 'metaKey']) {
+    const page = mount();
+    page.edit('shortcut draft');
+    let prevented = false;
+    page.listeners.keydown({ key: 's', [modifier]: true, preventDefault() { prevented = true; } });
+    await page.settle();
+    assert.equal(prevented, true);
+    assert.equal(page.writes.length, 1);
+    assert.equal(page.writes[0].content, 'shortcut draft');
+  }
+});
+
+test('search filters case-insensitively without switching or discarding the draft', async () => {
+  const page = mount();
+  page.edit('unsaved draft');
+  const search = page.find(n => n.props?.['aria-label'] === '搜索笔记');
+  search.props.onChange({ target: { value: ' B ' } });
+  page.render();
+  assert.equal(page.find(n => n.type === 'button' && n.props.title === 'a'), undefined);
+  assert.ok(page.find(n => n.type === 'button' && n.props.title === 'b'));
+  assert.equal(page.store.currentId, 'a');
+  assert.equal(page.find(n => n.type === 'Textarea').props.value, 'unsaved draft');
+  await page.tick();
+  assert.equal(page.writes[0].content, 'unsaved draft');
+});

@@ -40,7 +40,9 @@ export default function NotesPage() {
   const [conflict, setConflict] = useState<string | null>(null);
   /** Agent 在磁盘上改了笔记，但你本地还有没保存的改动 */
   const [external, setExternal] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filteredItems = items.filter((n) => `${n.title} ${n.content} ${n.tags.join(" ")}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const [reloadTick, setReloadTick] = useState(0);
   const [saveStatus, setSaveStatus] = useState("已自动保存");
   /** 已载入进表单的那份内容 */
@@ -157,6 +159,17 @@ export default function NotesPage() {
       flush();
     };
   }, [handleSave]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (!external) blocked.current = false;
+        void handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSave, external]);
   async function handleSelect(id: string) {
     if (id !== currentId && await handleSave()) select(id);
   }
@@ -209,9 +222,11 @@ export default function NotesPage() {
             <Plus className="h-4 w-4" /> 新建
           </Button>
         </div>
+        <div className="border-b p-3"><Input aria-label="搜索笔记" placeholder="搜索标题、正文、标签…" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
         <ScrollArea className="flex-1">
+          {items.length > 0 && filteredItems.length === 0 && <p className="p-4 text-xs text-muted-foreground">没有匹配的笔记</p>}
           {items.length === 0 && <p className="p-4 text-xs text-muted-foreground">还没有笔记，点击右上角 “新建”。</p>}
-          {items.map((n) => (
+          {filteredItems.map((n) => (
             <button
               key={n.id}
               onClick={() => void handleSelect(n.id)}
@@ -269,7 +284,7 @@ export default function NotesPage() {
             )}
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {format === "markdown" ? (
-                <MarkdownEditor value={content} onChange={setContent} placeholder={placeholder} />
+                <MarkdownEditor key={note.id} value={content} onChange={setContent} placeholder={placeholder} />
               ) : (
                 <Textarea
                   className="h-full min-h-0 flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm focus-visible:ring-0"
@@ -279,6 +294,7 @@ export default function NotesPage() {
                 />
               )}
             </div>
+            <footer className="flex justify-between border-t px-4 py-2 text-xs text-muted-foreground"><span>{saveStatus}</span><span>{content.replace(/\s/g, "").length} 字符 · {content.split("\n").length} 行</span></footer>
           </>
         )}
       </section>

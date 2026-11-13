@@ -1,3 +1,4 @@
+pub mod bilibili;
 pub mod cocktails;
 pub mod agents;
 pub mod archify;

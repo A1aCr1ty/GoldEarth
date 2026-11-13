@@ -41,6 +41,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping,
+            commands::bilibili::bilibili_data,
+            commands::bilibili::bilibili_cookie,
             commands::cocktails::cocktail_social_search,
             commands::music::music_search,
             commands::music::music_download,

@@ -39,7 +39,9 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "ping",
             "cocktail_social_search",
-            "music_search",
+            "bilibili_data",
+            "bilibili_cookie",
+  "music_search",
             "music_download",
             "music_catalog_search",
             "music_archive_download",

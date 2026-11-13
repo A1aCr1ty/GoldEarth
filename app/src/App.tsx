@@ -1,3 +1,4 @@
+import BilibiliPage from "@/pages/BilibiliPage";
 import { HashRouter, Route, Routes, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import CategoriesPage from "@/pages/CategoriesPage";
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/cocktails" element={<CocktailsPage />} />
           <Route path="/recipes" element={<RecipesPage />} />
           <Route path="/workout" element={<WorkoutPage />} />
+          <Route path="/bilibili" element={<BilibiliPage />} />
           <Route path="/music" element={<MusicPage />} />
           <Route path="/nba" element={<NbaPage />} />
           <Route path="/robotics" element={<RoboticsPage />} />
