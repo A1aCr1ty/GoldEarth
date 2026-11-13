@@ -446,7 +446,6 @@ impl Storage {
             name: trimmed,
             keyword: keyword.trim().to_string(),
             note: note.trim().to_string(),
-            zhuanzhuan_url: String::new(),
             created_at: now_iso(),
         };
         self.cols.price_targets.lock().push(target.clone());
@@ -455,24 +454,6 @@ impl Storage {
             &self.cols.price_targets.lock(),
         )?;
         Ok(target)
-    }
-
-    pub fn set_price_zhuanzhuan_url(&self, id: &str, url: String) -> Result<()> {
-        let mut targets = self.cols.price_targets.lock();
-        let target = targets
-            .iter_mut()
-            .find(|t| t.id == id)
-            .ok_or_else(|| StorageError::Invalid("物品不存在".into()))?;
-        let previous = std::mem::replace(&mut target.zhuanzhuan_url, url);
-        if let Err(error) = self.save(&self.data_dir.join(PRICE_TARGETS_FILE), &*targets) {
-            targets
-                .iter_mut()
-                .find(|t| t.id == id)
-                .unwrap()
-                .zhuanzhuan_url = previous;
-            return Err(error);
-        }
-        Ok(())
     }
 
     /// 删物品时连它的价格记录一起删：留着就成了没人认领的孤儿行，

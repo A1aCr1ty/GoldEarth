@@ -160,7 +160,6 @@ mod tests {
             name: "AirPods Pro2".into(),
             keyword: String::new(),
             note: String::new(),
-            zhuanzhuan_url: String::new(),
             created_at: "2026-10-01T00:00:00+00:00".into(),
         }
     }

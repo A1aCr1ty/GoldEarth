@@ -13,12 +13,11 @@ import { LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
+import { tauri } from "@/lib/tauri";
 // echarts 6 里 EChartsOption 只在主入口导出，core 里叫 EChartsCoreOption
 import type { EChartsOption } from "echarts";
 import { RefreshCw, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { tauri } from "@/lib/tauri";
 import { UP, DOWN, FLAT, colorOf, fixed, signed } from "@/lib/format";
 import { scalePx, useUiScaleValue } from "@/lib/uiScale";
 import { errText } from "@/lib/errors";
@@ -52,7 +51,7 @@ export function PricePanel() {
   if (s.items.length === 0) {
     return (
       <p className="py-10 text-center text-xs text-muted-foreground">
-        加一件想关注的物品，再点「国内比价」，查询国内公开二手报价并核对平台与样本。
+        加一件想关注的物品，再点「闲鱼查价」，查看在售商品的人民币挂牌价。
       </p>
     );
   }
@@ -101,6 +100,7 @@ function Row({
   const remove = usePrices((s) => s.remove);
   const result = usePrices((s) => s.results[row.target.id]);
   const failed = result !== undefined && !result.ok;
+  const current = result?.ok && result.avg !== null ? result : null;
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -115,7 +115,7 @@ function Row({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-2">
             <span className="truncate text-sm font-medium">{row.target.name}</span>
-            {!failed && row.changePct !== null && (
+            {!failed && (!current || current.count >= 3) && row.changePct !== null && (
               <span className="shrink-0 text-xs tabular-nums" style={{ color: colorOf(row.changePct) }}>
                 {signed(row.changePct, 1)}
               </span>
@@ -131,6 +131,12 @@ function Row({
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <RefreshCw className="h-3 w-3 animate-spin" /> 正在搜…
               </span>
+            ) : current ? (
+              <>
+                <span className="text-[0.625rem] text-muted-foreground">{current.count === 1 ? "本次挂牌价" : "本次挂牌中位数"}</span>
+                <span className="text-lg font-semibold tabular-nums">{money(current.avg, current.currency)}</span>
+                <span className="text-[0.625rem] text-muted-foreground">{current.count} 条闲鱼报价{current.count < 3 ? " · 样本较少" : ""}</span>
+              </>
             ) : row.latest === null ? (
               // 一次都还没抓到时不摆「--」：占位符看着像坏了，
               // 一句提示更能让人知道下一步该点哪儿
@@ -146,7 +152,7 @@ function Row({
               </>
             )}
           </div>
-          {row.latest !== null && (
+          {!current && row.latest !== null && (
             <p className="mt-0.5 text-[0.625rem] text-muted-foreground">{sourceName(row.source)} · {row.currency || "CNY"}</p>
           )}
         </div>
@@ -228,9 +234,7 @@ function Spark({ values }: { values: number[] }) {
 
 /** 选中那件的详情：趋势图 + 抓价 */
 function Detail({ targetId }: { targetId: string }) {
-  const [sampleSource, setSampleSource] = useState("all");
   const [sampleSort, setSampleSort] = useState("default");
-  useEffect(() => { setSampleSource("all"); }, [targetId]);
   const trend = usePrices((s) => s.trend);
   const loading = usePrices((s) => s.trendLoading);
   const probeRun = usePrices((s) => s.runProbe);
@@ -240,25 +244,7 @@ function Detail({ targetId }: { targetId: string }) {
   const refreshingAll = usePrices((s) => s.refreshingAll);
   const probing = usePrices((s) => s.probing);
   const currency = row?.currency || "CNY";
-  const sourceUrl = probe?.sourceUrl || `https://m2.9ji.com/search?keyword=${encodeURIComponent(row?.target.keyword || row?.target.name || "")}&searchType=3`;
-  const [shareUrl, setShareUrl] = useState("");
-  const [savingSource, setSavingSource] = useState(false);
-  const [sourceError, setSourceError] = useState("");
-  useEffect(() => {
-    setShareUrl(row?.target.zhuanzhuanUrl || "");
-    setSourceError("");
-  }, [targetId, row?.target.zhuanzhuanUrl]);
-  async function saveSource() {
-    setSavingSource(true);
-    setSourceError("");
-    try {
-      await tauri.setPriceZhuanzhuanUrl(targetId, shareUrl.trim());
-      await usePrices.getState().refresh();
-      await probeRun(targetId);
-    } catch (e) { setSourceError(errText(e)); }
-    finally { setSavingSource(false); }
-  }
-
+  const sourceUrl = probe?.sourceUrl || `https://www.goofish.com/search?q=${encodeURIComponent(row?.target.keyword || row?.target.name || "")}`;
   async function handleProbe() {
     try {
       await probeRun(targetId);
@@ -274,7 +260,7 @@ function Detail({ targetId }: { targetId: string }) {
         <div className="flex h-56 items-center justify-center text-xs text-muted-foreground">正在算趋势…</div>
       ) : trend.length === 0 ? (
         <p className="py-6 text-center text-xs text-muted-foreground">
-          还没有价格记录。点击「国内比价」，查看各平台实际可取得的人民币在售报价。
+          还没有价格记录。点击「闲鱼查价」，查看在售挂牌价。
         </p>
       ) : (
         <div>
@@ -291,7 +277,7 @@ function Detail({ targetId }: { targetId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" className="h-8 gap-1" onClick={() => void handleProbe()} disabled={probing || refreshingAll}>
           <Search className={querying ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
-          {querying ? "正在对照各平台…" : "国内比价"}
+          {querying ? "正在查询闲鱼…" : "闲鱼查价"}
         </Button>
         <Button
           size="sm"
@@ -305,18 +291,6 @@ function Detail({ targetId }: { targetId: string }) {
         <span className="text-[0.6875rem] text-muted-foreground">
           只采国内在售整机；配置与成色见样本，来源缺失会明确提示
         </span>
-      </div>
-
-      <div className="space-y-2 rounded border p-2">
-        <label htmlFor={`zz-source-${targetId}`} className="text-xs font-medium">转转商品分享链接</label>
-        <div className="flex flex-wrap gap-2">
-          <Input id={`zz-source-${targetId}`} className="h-8 min-w-0 flex-1 text-xs" value={shareUrl}
-            onChange={e => setShareUrl(e.target.value)} placeholder="粘贴含 infoId 的转转商品详情链接" disabled={savingSource || probing || refreshingAll} />
-          <Button size="sm" variant="outline" className="h-8" onClick={() => void saveSource()}
-            disabled={savingSource || probing || refreshingAll}>{savingSource ? "正在更新…" : "保存并查价"}</Button>
-        </div>
-        <p className="text-[0.6875rem] text-muted-foreground">保存一次后随查价更新，无需登录。逐页核对同款商品；不足 3 条仅展示，不纳入综合价。清空并保存可解除绑定。</p>
-        {sourceError && <p className="text-xs text-destructive">{sourceError}</p>}
       </div>
 
       {probe && !querying && (
@@ -338,34 +312,36 @@ function Detail({ targetId }: { targetId: string }) {
               {probe.query && <p className="mt-1 text-muted-foreground">检索词：{probe.query}</p>}
               {probe.ok && (
                 <p className="mt-1 text-muted-foreground">
-                  参考价 <b className="tabular-nums">{money(probe.avg, probe.currency)}</b>，样本区间 {money(probe.min, probe.currency)} ~ {money(probe.max, probe.currency)}
+                  {probe.count === 1 ? "挂牌价" : "挂牌参考价"} <b className="tabular-nums">{money(probe.avg, probe.currency)}</b>{probe.count > 1 && `，样本区间 ${money(probe.min, probe.currency)} ~ ${money(probe.max, probe.currency)}`}
                   ，来源 {probe.source || "公开报价"}，共 {probe.count} 条
                 </p>
               )}
-              {probe.method && <p className="mt-1 text-muted-foreground">计算方式：{probe.method}；来源组合变化时单独记录趋势。</p>}
+              {probe.ok && probe.method && <p className="mt-1 text-muted-foreground">计算方式：{probe.method}。</p>}
               {!!probe.sources?.length && (
                 <div className="mt-3 space-y-2">
-                  <p className="font-medium">平台覆盖：{probe.coverage || 0} / {probe.sources.length} 个来源取得足够样本</p>
                   {probe.sources.map(source => (
                     <div key={source.id} className="rounded border border-border/70 p-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <button className="font-medium underline" onClick={() => openSource(source.url)}>{source.name}</button>
-                        <span>{source.status === "ok" ? `${source.count} 条 · 中位数 ¥${fixed(source.median)}` : "未参与计算"}</span>
+                        <span>{source.count > 0 ? `${source.count} 条 · ${source.count === 1 ? "挂牌价" : "挂牌中位数"} ¥${fixed(source.median)}${source.count < 3 ? " · 样本较少" : ""}` : "未取得报价"}</span>
                       </div>
                       <p className="mt-1 text-[0.6875rem] text-muted-foreground">{source.message}</p>
+                      {source.status === "verification_required" && <div className="mt-2 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => void tauri.showXianyuWindow().catch(error => window.alert(errText(error)))}>打开闲鱼窗口</Button>
+                        <Button size="sm" variant="outline" onClick={() => void handleProbe()} disabled={probing || refreshingAll}>验证后重新查价</Button>
+                      </div>}
                     </div>
                   ))}
                 </div>
               )}
               {!!probe.listings?.length && (
-                <details className="mt-2 text-muted-foreground">
+                <details className="mt-2 text-muted-foreground" open={probe.count > 0 && probe.count < 3 ? true : undefined}>
                   <summary className="cursor-pointer">查看本次 {probe.listings.length} 条商品样本</summary>
                   <div className="my-3 flex flex-wrap gap-2">
-                    <select aria-label="筛选报价平台" className="rounded border bg-background p-1 text-xs" value={sampleSource} onChange={e => setSampleSource(e.target.value)}><option value="all">全部平台</option>{probe.sources?.filter(source => source.count > 0).map(source => <option key={source.id} value={source.id}>{source.name}（{source.count}）</option>)}</select>
                     <select aria-label="报价排序" className="rounded border bg-background p-1 text-xs" value={sampleSort} onChange={e => setSampleSort(e.target.value)}><option value="default">默认排序</option><option value="asc">价格从低到高</option><option value="desc">价格从高到低</option></select>
                   </div>
                   <ul className="mt-2 max-h-96 space-y-2 overflow-y-auto">
-                    {probe.listings.filter(item => sampleSource === "all" || item.source === sampleSource).sort((a, b) => sampleSort === "asc" ? a.price - b.price : sampleSort === "desc" ? b.price - a.price : 0).map((item) => (
+                    {probe.listings.slice().sort((a, b) => sampleSort === "asc" ? a.price - b.price : sampleSort === "desc" ? b.price - a.price : 0).map((item) => (
                       <li key={item.url} className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <button className="text-left underline hover:text-foreground" onClick={() => openSource(item.url)}>{item.title}</button>

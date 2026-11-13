@@ -87,7 +87,6 @@ export const tauri = {
   openReader(url: string, title?: string) { return invoke<void>("open_reader", { url, title: title ?? null }); },
   // ===== 价格追踪 =====
   listPriceTargets() { return invoke<import("@/types").PriceTarget[]>("list_price_targets"); },
-  setPriceZhuanzhuanUrl(targetId: string, url: string) { return invoke<void>("set_price_zhuanzhuan_url", { targetId, url }); },
   addPriceTarget(input: { name: string; keyword?: string; note?: string }) { return invoke<import("@/types").PriceTarget>("add_price_target", { name: input.name, keyword: input.keyword ?? null, note: input.note ?? null }); },
   removePriceTarget(id: string) { return invoke<void>("remove_price_target", { id }); },
   listPriceSamples(targetId: string) { return invoke<import("@/types").PriceSample[]>("list_price_samples", { targetId }); },

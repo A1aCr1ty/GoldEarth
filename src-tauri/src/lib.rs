@@ -151,7 +151,6 @@ pub fn run() {
             commands::reader::open_reader,
             commands::prices::list_price_targets,
             commands::prices::add_price_target,
-            commands::prices::set_price_zhuanzhuan_url,
             commands::prices::remove_price_target,
             commands::prices::list_price_samples,
             commands::prices::price_trend,

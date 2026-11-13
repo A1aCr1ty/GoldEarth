@@ -478,7 +478,6 @@ export interface PriceTarget {
   name: string;
   /** 搜价关键词，留空就用 name */
   keyword: string;
-  zhuanzhuanUrl?: string;
   note: string;
   createdAt: string;
 }

@@ -153,8 +153,8 @@ pub struct PriceTarget {
     pub keyword: String,
     #[serde(default)]
     pub note: String,
-    #[serde(default)]
-    pub zhuanzhuan_url: String,
+
+
     #[serde(alias = "created_at")]
     pub created_at: String,
 }

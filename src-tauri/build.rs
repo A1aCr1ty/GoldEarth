@@ -148,7 +148,6 @@ fn main() {
             "open_reader",
             "list_price_targets",
             "add_price_target",
-            "set_price_zhuanzhuan_url",
             "remove_price_target",
             "list_price_samples",
             "price_trend",

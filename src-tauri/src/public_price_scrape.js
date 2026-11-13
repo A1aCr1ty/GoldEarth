@@ -1,13 +1,22 @@
 (function (input) {
-  const result = { pageUrl: location.href, pageTitle: document.title, ready: false, status: '', message: '', items: [], relatedUrls: [] };
-  const compact = text => text.toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]/g, '');
+  const result = { pageUrl: location.href, pageTitle: document.title, ready: false, status: '', message: '', items: [], candidateIds: [], matchedIds: [] };
+  const compact = text => text.toLowerCase().replace(/xiaomi/g, "小米").replace(/redmi/g, "红米").replace(/[^a-z0-9\u3400-\u9fff]/g, '');
   const query = input.keyword.toLowerCase();
   const terms = query.match(/[a-z]+[0-9]*|[0-9]+[a-z]*|[\u3400-\u9fff]+/g) || [];
   const pocket = query.match(/pocket\s*(\d+[a-z]*)/i);
   const seen = new Set();
+  const amountPattern = /^(?:[¥￥]\s*)?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?$/;
+  const cleanAmount = value => {
+    const text = String(value ?? '').normalize('NFKC').trim();
+    return amountPattern.test(text) ? text : null;
+  };
   function matches(title) {
     const normalized = compact(title);
-    if (!terms.length || !terms.every(t => normalized.includes(compact(t)))) return false;
+    if (query === 'redmi book 14 2026') {
+      if (!/(?:redmi|红米)[\s-]*book[\s-]*14(?![0-9a-z])|(?:redmi|红米)[\s-]*book[\s-]*14(?=2026)/i.test(title)
+          || !/(?:^|[^0-9])2026(?![0-9])|book[\s-]*142026(?![0-9])/i.test(title)
+          || /book[\s-]*(?:pro|air)|14[\s-]*(?:pro|air)|202[0-5]款|仅主板|屏幕总成|充电器|适配器|键盘膜/i.test(title)) return false;
+    } else if (!terms.length || !terms.every(t => normalized.includes(compact(t)))) return false;
     if (pocket && (!/大疆|dji/i.test(title) || !new RegExp('pocket[\\s-]*' + pocket[1] + '\\b(?![\\s-]*axis)', 'i').test(title))) return false;
     if (!/全能|combo/i.test(query) && /全能套装|creator\s*combo/i.test(title)) return false;
     return !/租赁|租金|押金|定金|订金|求购|回收|收购|维修|故障|配件单|仅配件|贴膜|保护套|保护壳|空盒|包装盒|for parts|replacement|not working/i.test(title);
@@ -20,7 +29,7 @@
     if (!Number.isFinite(price) || price <= 0 || price > 10000000) return;
     let url;
     try { url = new URL(href, location.href); } catch (_) { return; }
-    const hosts = { suning: ['product.suning.com'], taobao: ['item.taobao.com', 'detail.tmall.com'], nine: ['m2.9ji.com'], xianyu: ['www.goofish.com'], jd: ['item.jd.com'], zhuanzhuan: ['m.zhuanzhuan.com'] }[input.provider] || [];
+    const hosts = { suning: ['product.suning.com'], taobao: ['item.taobao.com', 'detail.tmall.com'], nine: ['m2.9ji.com'], xianyu: ['www.goofish.com'], jd: ['item.jd.com'] }[input.provider] || [];
     if (!hosts.includes(url.hostname) || url.protocol !== 'https:') return;
     // Strip tracking parameters so repeated cards across loads remain one sample.
     if (['taobao', 'xianyu'].includes(input.provider)) {
@@ -33,33 +42,7 @@
     seen.add(url.pathname + url.search);
     result.items.push({ title, price, currency: 'CNY', url: url.href, source: input.provider, condition: condition || '' });
   }
-  if (input.provider === 'zhuanzhuan') {
-    const title = document.querySelector('#tab-prod .text__content--condition');
-    const price = document.querySelector('#tab-prod .price-info-2026__num');
-    const condition = document.querySelector('#tab-prod .same-product-title');
-    const body = document.body.innerText || '';
-    if (/商品已下架|商品已售出|商品不存在|宝贝已卖出/.test(body)) {
-      result.ready = true;
-      result.status = 'restricted';
-      result.message = '转转商品已售出或不可用，未计价';
-      return result;
-    }
-    if (!title || !price || !condition || !/立即购买/.test(body)) return result;
-    result.ready = true;
-    // 仅当前商品主售价；新品价、价格趋势图、同款卡片上的数字均不直接计价。
-    const id = new URL(location.href).searchParams.get('infoId');
-    if (id && /^\d+$/.test(id)) add(title.textContent.trim(), price.textContent,
-      'https://m.zhuanzhuan.com/u/streamline_detail/new-goods-detail?infoId=' + id, condition.textContent.trim());
-    if (result.items.length) {
-      for (const card of document.querySelectorAll('#tab-prod .model-item__spu[lego-goods-exposure]')) {
-        try {
-          const related = JSON.parse(card.getAttribute('lego-goods-exposure')).infoId;
-          if (/^\d+$/.test(related) && related !== id) result.relatedUrls.push(
-            'https://m.zhuanzhuan.com/u/streamline_detail/new-goods-detail?infoId=' + related);
-        } catch (_) { /* 页面卡片无有效商品 ID 时跳过 */ }
-      }
-    } else result.message = '转转商品型号与检索词不匹配，未计入样本';
-  } else if (input.provider === 'nine') {
+  if (input.provider === 'nine') {
     const cards = document.querySelectorAll('a.list-item[href*="/secondHand/detail/"]');
     result.ready = cards.length > 0;
     for (const card of cards) {
@@ -72,22 +55,75 @@
     }
   } else if (input.provider === 'xianyu') {
     const ret = window.__xyRawRet || '';
-    if (ret && !ret.startsWith('SUCCESS::')) {
+    const blocked = /(?:登录后查看|请先登录|滑动验证|安全验证|访问受限)/.test(document.body?.innerText || '');
+    if (!ret.startsWith('SUCCESS::') && (ret || blocked)) {
       result.ready = true;
       result.status = 'restricted';
-      result.message = '闲鱼本次限制了公开搜索，未取得可用在售样本';
+      result.message = '闲鱼限制了本次搜索。打开闲鱼窗口，按页面提示登录或验证后重试。';
       return result;
     }
-    if (!ret.startsWith('SUCCESS::')) return result;
     let rows;
-    try { rows = JSON.parse(window.__xyRaw || '{}').data.resultList; } catch (_) { return result; }
-    if (!Array.isArray(rows)) return result;
-    result.ready = true;
-    for (const row of rows) {
-      const item = row?.data?.item?.main?.exContent;
-      if (!item || !item.title || !item.itemId || !item.price) continue;
-      if (item.sold || item.soldOut || item.isSold) continue;
-      add(item.title, item.price, 'https://www.goofish.com/item?id=' + encodeURIComponent(item.itemId), item.condition || '');
+    if (ret.startsWith('SUCCESS::')) {
+      try { rows = JSON.parse(window.__xyRaw || '{}').data?.resultList; } catch (_) {}
+    }
+    const candidateIds = new Set();
+    const matchedIds = new Set();
+    const track = (id, title) => {
+      if (!/^\d+$/.test(String(id))) return;
+      candidateIds.add(String(id));
+      if (title && matches(title)) matchedIds.add(String(id));
+    };
+    if (Array.isArray(rows)) {
+      result.ready = true;
+      for (const row of rows) {
+        const item = row?.data?.item?.main?.exContent;
+        if (!item) continue;
+        track(item.itemId, item.title);
+        if (!item.title || !item.itemId || !item.price) continue;
+        if (item.sold || item.soldOut || item.isSold) continue;
+        add(item.title, item.price, 'https://www.goofish.com/item?id=' + encodeURIComponent(item.itemId), item.condition || '');
+      }
+    }
+    // The rendered search results can be available even when the response shape changes.
+    const cards = document.querySelectorAll('a[href*="/item?"][href*="id="]');
+    for (const card of cards) {
+      const text = card.innerText || '';
+      const titleNode = card.querySelector('[class*="title"], [class*="Title"]');
+      const priceNode = card.querySelector('[class*="price"], [class*="Price"]');
+      const title = titleNode?.textContent?.trim()
+        || card.getAttribute?.('title')?.trim()
+        || card.getAttribute?.('aria-label')?.trim()
+        || card.querySelector('img[alt]')?.getAttribute?.('alt')?.trim();
+      try {
+        const url = new URL(card.href, location.href);
+        if (url.origin !== 'https://www.goofish.com' || url.pathname !== '/item') continue;
+        track(url.searchParams.get('id'), title);
+      } catch (_) { continue; }
+      if (/已售出|已卖出|已下架|售罄|券后|分期|到手价|补贴后/.test(text) ||
+          card.closest?.('aside, [class*="recommend"], [class*="Recommend"]')) continue;
+      // Price components often render the currency symbol and digits in separate nodes.
+      // Only accept bare digits from a price element, never from general card text.
+      const priceText = priceNode?.textContent?.replace(/\s+/g, '') || '';
+      const lines = text.normalize('NFKC').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const amounts = new Set();
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        const amount = /^[¥￥]$/.test(line)
+          ? cleanAmount(line + (lines[index + 1] || ''))
+          : /^[¥￥]/.test(line) ? cleanAmount(line) : null;
+        if (amount) amounts.add(amount.replace(/[¥￥,\s]/g, ''));
+      }
+      const explicit = cleanAmount(priceText);
+      if (explicit) amounts.add(explicit.replace(/[¥￥,\s]/g, ''));
+      const price = amounts.size === 1 ? [...amounts][0] : null;
+      if (!title || !price) continue;
+      add(title, price, card.href, '');
+    }
+    result.candidateIds = Array.from(candidateIds);
+    result.matchedIds = Array.from(matchedIds);
+    result.ready ||= cards.length > 0;
+    if (!result.items.length && result.ready) {
+      result.message = '已读取闲鱼搜索结果，但没有通过型号、在售状态及价格筛选的商品。';
     }
   } else if (input.provider === 'suning' || input.provider === 'taobao') {
     const body = document.body?.innerText || '';

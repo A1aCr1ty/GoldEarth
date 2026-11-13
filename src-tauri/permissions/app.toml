@@ -66,7 +66,6 @@ commands.allow = [
   "delete_note",
   "fetch_xianyu_price",
   "fetch_public_price",
-  "set_price_zhuanzhuan_url",
   "get_library_agent_session",
   "get_library_dir",
   "get_note",

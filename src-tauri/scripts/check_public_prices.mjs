@@ -27,7 +27,7 @@ const cards = [
 ];
 function run(provider, keyword, rawRet = "", raw = "{}") {
   return vm.runInNewContext(script.replace("__INPUT_JSON__", JSON.stringify({ provider, keyword })), {
-    document: { title: "公开商品搜索", querySelectorAll: () => cards },
+    document: { title: "公开商品搜索", querySelectorAll: () => provider === "nine" ? cards : [] },
     location: { href: "https://m2.9ji.com/search?keyword=pocket%203&searchType=3", hostname: provider === "jd" ? "passport.jd.com" : "m2.9ji.com" },
     window: { __xyRawRet: rawRet, __xyRaw: raw }, URL,
   });
@@ -67,3 +67,49 @@ for (const provider of ['suning', 'taobao']) {
   assert.equal(result.items[0].price, 2000);
 }
 console.log('通过：苏宁与淘宝的二手限定、已售/优惠/分期/外链过滤，以及追踪参数去重。');
+const laptopCards = [
+  card("20", "REDMI Book 14 2026款 酷睿版 16G 512GB", "￥2999"),
+  card("21", "红米Book 14 2026款 16G 1TB", "￥3199"),
+  card("22", "REDMI Book Pro 14 2026款", "￥3599"),
+  card("23", "REDMI Book 14 2025款", "￥2499"),
+  card("24", "REDMI Book 14 2026款 充电器", "￥99"),
+];
+const laptops = vm.runInNewContext(script.replace("__INPUT_JSON__", JSON.stringify({provider: "nine", keyword: "REDMI Book 14 2026"})), {
+  document: {title: "商品搜索", querySelectorAll: () => laptopCards},
+  location: {href: "https://m2.9ji.com/search"}, URL,
+});
+assert.deepEqual(Array.from(laptops.items, item => item.price), [2999, 3199]);
+
+const renderedFish = vm.runInNewContext(script.replace("__INPUT_JSON__", JSON.stringify({provider: "xianyu", keyword: "小米book pro"})), {
+  document: {title: "闲鱼搜索", querySelectorAll: () => [{
+    href: "https://www.goofish.com/item?id=321",
+    innerText: "Xiaomi Book Pro 14 ¥2999",
+    querySelector: selector => ({textContent: selector.includes("title") ? "Xiaomi Book Pro 14" : "¥2999"}),
+  }]},
+  location: {href: "https://www.goofish.com/search?q=test"},
+  window: {}, URL,
+});
+assert.equal(renderedFish.items[0].price, 2999);
+
+function fishCard(id, price, innerText, title = "Xiaomi Book Pro 14") {
+  return {
+    href: "https://www.goofish.com/item?id=" + id,
+    innerText,
+    getAttribute: attr => attr === "aria-label" ? title : null,
+    querySelector: selector => selector.includes("price") && price ? {textContent: price} : null,
+  };
+}
+const variedFish = vm.runInNewContext(script.replace("__INPUT_JSON__", JSON.stringify({provider: "xianyu", keyword: "小米book pro"})), {
+  document: {title: "闲鱼搜索", querySelectorAll: () => [
+    fishCard(1, "３，２９９", "Xiaomi Book Pro 14"),
+    fishCard(2, null, "Xiaomi Book Pro 14\n￥\n3,599"),
+    fishCard(3, "¥ 3999", "Xiaomi Book Pro 14\n¥3999"),
+    fishCard(3, "3999", "Xiaomi Book Pro 14"),
+    fishCard(4, "2999", "Xiaomi Book Pro 14\n¥5999\n¥2999"),
+    fishCard(5, "2599", "已卖出"),
+    fishCard(6, "99", "分期"),
+  ]},
+  location: {href: "https://www.goofish.com/search?q=test"},
+  window: {}, URL,
+});
+assert.deepEqual(Array.from(variedFish.items, item => item.price), [3299, 3599, 3999]);

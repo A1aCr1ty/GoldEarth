@@ -696,6 +696,11 @@ pub async fn xianyu_fetch(
 /// 登录态会留在 App 自己的 WebView2 目录里，下次直接复用。
 #[tauri::command]
 pub async fn xianyu_show(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("domestic-prices-xianyu") {
+        window.show().map_err(|error| error.to_string())?;
+        window.set_focus().map_err(|error| error.to_string())?;
+        return Ok(());
+    }
     if let Some(w) = app.get_webview_window(LABEL) {
         let _ = w.set_position(tauri::PhysicalPosition::new(80.0, 80.0));
         w.show().map_err(|e| format!("显示闲鱼窗口失败：{e}"))?;
