@@ -117,7 +117,7 @@ export default function StockAccountsPage() {
             </Card>
             <HoldingValuePanel key={selected.id} positions={valuedPositions} accountId={selected.id} />
             </>}
-            {tab === "swing" && <HoldingSwingPanel key={`swing-${selected.id}`} account={selected} />}
+            {tab === "swing" && <HoldingSwingPanel key={`swing-${selected.id}`} account={{...selected,positions:valuedPositions}} />}
             {tab === "transactions" && <AccountTransactions key={`transactions-${selected.id}`} account={selected} />}
           </> : <Card><CardContent className="flex flex-col items-center px-6 py-16 text-center"><Wallet className="mb-3 h-9 w-9 text-muted-foreground/50" /><div className="font-medium">添加你的第一个股票账户</div><p className="mt-1 text-sm text-muted-foreground">每个账户独立保存持仓快照和同步时间。</p><Button className="mt-4" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4" />添加账户</Button></CardContent></Card>}
 
