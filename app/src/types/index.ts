@@ -83,7 +83,7 @@ export interface AgentStreamEvent {
   text: string;
 }
 export interface AppSettings {
-  /** 外部 Agent 可执行文件地址：可执行文件本身或其所在目录，留空则只查系统 PATH */
+  /** 外部 Agent 可执行文件地址：可执行文件本身或其所在目录，留空则自动发现官方 CLI 和 PATH */
   agentBinPath: string;
   /** 股票看板顶部展示哪些指数，空表示用默认那六个 */
   indexCodes?: string[];

@@ -100,3 +100,51 @@ test('Agent context contains actual report values, rules and no null placeholder
   assert.match(context, /规则评分 100\/100/);
   assert.doesNotMatch(context, /\bnull\b/);
 });
+
+function quote(overrides = {}) {
+  return { code: 'sh600519', price: 105, prevClose: 104, changePct: 0.96, pe: 20, pb: 4, time: '20261113150000', ...overrides };
+}
+
+test('price fundamental synthesis uses the live quote against the latest completed MA20', () => {
+  const result = moduleUnderTest.exports.synthesizePriceFundamentals({
+    quote: quote({ price: 110 }), fundamental: analyzeFundamentals(report()),
+    quant: { ready: true, action: '买入候选', ma20: 100, bias: 2 }, quoteFresh: true,
+  });
+  assert.equal(result.priceToMa20, 10);
+  assert.equal(result.earningsYield, 5);
+  assert.match(result.conclusion, /高于 MA20 10\.00%/);
+  assert.match(result.conclusion, /不等于当前价格适合追入/);
+  assert.match(result.valuationNote, /PE\(TTM\) 20\.00/);
+  assert.match(result.valuationNote, /不是预期收益/);
+});
+
+test('price fundamental synthesis combines strong financials and confirmed price conditions', () => {
+  const result = moduleUnderTest.exports.synthesizePriceFundamentals({
+    quote: quote(), fundamental: analyzeFundamentals(report()),
+    quant: { ready: true, action: '买入候选', ma20: 100 }, quoteFresh: true,
+  });
+  assert.equal(result.priceToMa20, 5);
+  assert.match(result.conclusion, /可列入研究候选/);
+  assert.match(result.conclusion, /不代表预期上涨/);
+});
+
+test('losses, stale quotes and missing technical data suppress misleading price conclusions', () => {
+  const weak = analyzeFundamentals(report({ netProfit: -1, netProfitYoy: -120, roeWeighted: -2 }));
+  const loss = moduleUnderTest.exports.synthesizePriceFundamentals({ quote: quote(), fundamental: weak,
+    quant: { ready: true, action: '买入候选', ma20: 100 }, quoteFresh: true });
+  assert.match(loss.conclusion, /不能因股价低或 PE\/PB/);
+  const stale = moduleUnderTest.exports.synthesizePriceFundamentals({ quote: quote(), fundamental: analyzeFundamentals(report()),
+    quant: { ready: true, action: '买入候选', ma20: 100 }, quoteFresh: false });
+  assert.match(stale.conclusion, /报价过旧/);
+  const missing = moduleUnderTest.exports.synthesizePriceFundamentals({ quote: quote(), fundamental: analyzeFundamentals(report()),
+    quant: { ready: false, reason: '缺日线' }, quoteFresh: true });
+  assert.match(missing.conclusion, /日线不足/);
+  assert.equal(missing.priceToMa20, null);
+});
+
+test('peer medians ignore missing values and support odd and even groups', () => {
+  assert.equal(moduleUnderTest.exports.peerMedian([30, null, 10, 20]), 20);
+  assert.equal(moduleUnderTest.exports.peerMedian([30, 10, 20, 40]), 25);
+  assert.equal(moduleUnderTest.exports.peerMedian([-10, 0, 20]), 0);
+  assert.equal(moduleUnderTest.exports.peerMedian([null, undefined, NaN]), null);
+});
