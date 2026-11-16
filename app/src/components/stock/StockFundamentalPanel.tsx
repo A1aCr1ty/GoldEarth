@@ -3,6 +3,7 @@ import { ExternalLink, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StockSearch } from "@/components/stock/StockSearch";
+import { StockPeerComparison } from "@/components/stock/StockPeerComparison";
 import { tauri } from "@/lib/tauri";
 import { amountText, fixed, signed } from "@/lib/format";
 import { chinaDate, evaluateQuant } from "@/lib/stockQuant";
@@ -12,6 +13,7 @@ import {
   analyzeFundamentals,
   combineOperationAdvice,
   latestFinancialReport,
+  synthesizePriceFundamentals,
   valuationObservations,
 } from "@/lib/fundamental";
 import { useStocks } from "@/store/stocks";
@@ -85,6 +87,8 @@ export function StockFundamentalPanel({ onAskAgent }: { onAskAgent: () => void }
   const quoteFresh = data.quote?.code === current && quoteAge >= 0 && quoteAge <= 7;
   const advice = useMemo(() => combineOperationAdvice({ fundamental: analysis, quant, model,
     quantity: validQuantity ? quantity : 0, quoteFresh }), [analysis, quant, model, quantity, validQuantity, quoteFresh]);
+  const synthesis = useMemo(() => synthesizePriceFundamentals({ quote: data.quote, fundamental: analysis, quant, quoteFresh }),
+    [data.quote, analysis, quant, quoteFresh]);
 
   async function open(url: string, title: string) {
     try { await tauri.openReader(url, title); } catch (e) { setError(`打开来源失败：${String(e)}`); }
@@ -123,6 +127,17 @@ export function StockFundamentalPanel({ onAskAgent }: { onAskAgent: () => void }
       {data.financial && !latest && <Empty text="报告缺少有效报告期，或公告日期尚未到达，暂不用于分析。" />}
 
       {data.financial && analysis && <div className="mx-auto max-w-[90rem] space-y-4">
+        <section className="space-y-4 rounded-lg border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-3"><h2 className="mr-auto text-base font-semibold">{data.financial.name} · 股价 × 财报综合分析</h2><span className="rounded bg-secondary px-2 py-1 font-semibold">{advice.action}</span></div>
+          <p className="text-sm font-medium leading-6">{synthesis.conclusion}</p>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric label="当前股价" value={synthesis.currentPrice === null ? "暂无" : `${synthesis.currentPrice.toFixed(2)} 元`} note={`当日 ${signed(synthesis.changePct)} · ${quoteFresh ? "报价有效" : "报价过旧或不匹配"} · ${data.quote?.time || "时间未知"}`} />
+            <Metric label="财报质量" value={analysis.score === null ? "数据不足" : `${analysis.score} / 100 · ${analysis.rating}`} note={`${analysis.report.reportDateName || analysis.report.reportDate} · 指标覆盖 ${analysis.coverage}%`} />
+            <Metric label="当前估值" value={`PE ${synthesis.pe?.toFixed(2) ?? "不可用"} / PB ${synthesis.pb?.toFixed(2) ?? "不可用"}`} note={synthesis.earningsYield === null ? "无有效 PE，不计算静态盈利收益率" : `静态盈利收益率 ${synthesis.earningsYield.toFixed(2)}% · 非预期收益`} />
+            <Metric label="当前价相对 MA20" value={synthesis.priceToMa20 === null ? "暂无" : signed(synthesis.priceToMa20)} note={synthesis.ma20 === null ? "最近日线不足" : `MA20 ${synthesis.ma20.toFixed(3)} · 日线 ${quant?.ready ? quant.date : "未知"}`} />
+          </div>
+          <p className="text-[0.6875rem] leading-5 text-muted-foreground">{synthesis.valuationNote} 财报反映历史经营，当前股价反映市场行情；二者日期口径不同，结论须随新公告和报价更新。</p>
+        </section>
         <section className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
           <div className="rounded-lg border bg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -155,6 +170,8 @@ export function StockFundamentalPanel({ onAskAgent }: { onAskAgent: () => void }
             <p className="mt-3 border-t pt-2 text-[0.6875rem] text-muted-foreground">不自动下单、不计算买卖数量。财报分数不是上涨概率，模型候选也须经过仓位和止损审核。</p>
           </div>
         </section>
+
+        <StockPeerComparison key={current} current={{ code: current, name: data.financial.name, financial: data.financial, analysis, quote: data.quote }} />
 
         <section className="rounded-lg border bg-card p-4">
           <h3 className="font-semibold">机构研究方法 · 3—12个月投资价值</h3>

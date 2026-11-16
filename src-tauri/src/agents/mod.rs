@@ -71,6 +71,14 @@ fn resolve_program(program: &str, bin_path: Option<&str>) -> PathBuf {
             }
         }
     }
+    if program.eq_ignore_ascii_case("kimi") {
+        if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+            let bundled = PathBuf::from(home).join(".kimi-code/bin/kimi.exe");
+            if bundled.is_file() {
+                return bundled;
+            }
+        }
+    }
     let path = std::env::var_os("PATH").unwrap_or_default();
     for dir in std::env::split_paths(&path) {
         if dir.as_os_str().is_empty() {
@@ -160,6 +168,31 @@ mod tests {
         // 写了路径分隔符就不再搜 PATH，原样交给 spawn
         let explicit = PathBuf::from("tools\\bin\\mycli.exe");
         assert_eq!(resolve_program(r"tools\bin\mycli.exe", None), explicit);
+    }
+
+    #[test]
+    fn kimi_build_command_honors_explicit_executable() {
+        let root = std::env::temp_dir().join(format!("goldearth-kimi-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let executable = root.join("kimi.exe");
+        std::fs::write(&executable, b"fixture only; never executed").unwrap();
+        let agent = Agent {
+            id: "kimi-test".into(), name: "Kimi".into(), kind: crate::db::models::AgentKind::Kimi,
+            command: "kimi".into(), args: vec!["--version".into()], description: None, enabled: true, created_at: String::new(),
+        };
+        let command = build_command(&agent, "", Some(executable.to_str().unwrap()), None);
+        assert_eq!(command.as_std().get_program(), executable.as_os_str());
+        std::fs::remove_file(&executable).unwrap();
+        std::fs::remove_dir(&root).unwrap();
+    }
+
+    #[test]
+    fn discovers_official_kimi_cli_when_installed() {
+        let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) else { return; };
+        let bundled = PathBuf::from(home).join(".kimi-code/bin/kimi.exe");
+        if bundled.is_file() {
+            assert_eq!(resolve_program("kimi", None), bundled);
+        }
     }
 
     #[test]
@@ -930,7 +963,7 @@ pub fn build_command(
     bin_path: Option<&str>,
     work_dir: Option<&std::path::Path>,
 ) -> Command {
-    let program = resolve_program(&agent.command, if agent.kind == crate::db::models::AgentKind::Kimi { None } else { bin_path });
+    let program = resolve_program(&agent.command, bin_path);
 
     let mut args: Vec<String> = Vec::with_capacity(agent.args.len() + 2);
     let mut has_placeholder = false;

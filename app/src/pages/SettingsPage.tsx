@@ -130,10 +130,10 @@ export default function SettingsPage() {
                 id="agent-bin-path"
                 value={binPath}
                 onChange={(e) => setBinPath(e.target.value)}
-                placeholder="留空则只按系统 PATH 查找，或填写完整路径如 C:\\npm\\codex.cmd"
+                placeholder="留空自动发现官方 CLI，或填写完整路径如 C:\\Users\\name\\.kimi-code\\bin\\kimi.exe"
               />
               <p className="text-xs text-muted-foreground">
-                可填可执行文件本身（如 <code>codex.cmd</code>），也可填它所在的目录。留空时 App 会自动在 PATH 中查找并兼容 npm 生成的 <code>.cmd</code> 启动器。
+                可填可执行文件本身（如 <code>kimi.exe</code>、<code>codex.cmd</code>），也可填它所在的目录。留空时 App 会自动发现 Kimi Code 官方安装目录和 PATH，并兼容 npm 生成的 <code>.cmd</code> 启动器。
               </p>
             </div>
             <div className="flex items-center gap-2">

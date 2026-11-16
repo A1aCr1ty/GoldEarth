@@ -11,6 +11,7 @@ import { StockAgentPanel } from "@/components/stock/StockAgentPanel";
 import { StockQuantPanel } from "@/components/stock/StockQuantPanel";
 import { StockFundamentalPanel } from "@/components/stock/StockFundamentalPanel";
 import { IndexPicker } from "@/components/stock/IndexPicker";
+import { IndexSwingPanel } from "@/components/stock/IndexSwingPanel";
 import { StockSearch } from "@/components/stock/StockSearch";
 import { StrategyPlatform } from "@/components/stock/StrategyPlatform";
 import { ValueResearch } from "@/components/stock/ValueResearch";
@@ -38,7 +39,7 @@ const RANKS: { value: RankKind; label: string }[] = [
 
 export default function StocksPage() {
   const s = useStocks();
-  const [view, setView] = useState<"market" | "fundamental" | "strategy" | "value">("market");
+  const [view, setView] = useState<"market" | "fundamental" | "indexSwing" | "strategy" | "value">("market");
   const [rankKind, setRankKind] = useState<RankKind>("gainers");
   const [rightTab, setRightTab] = useState<"market" | "agent" | "quant">("market");
 
@@ -76,6 +77,7 @@ export default function StocksPage() {
         <div className="flex shrink-0 items-center gap-1">
           <Button size="sm" variant={view === "market" ? "secondary" : "ghost"} onClick={() => setView("market")}>行情看板</Button>
           <Button size="sm" variant={view === "fundamental" ? "secondary" : "ghost"} onClick={() => setView("fundamental")}>财报分析</Button>
+          <Button size="sm" variant={view === "indexSwing" ? "secondary" : "ghost"} onClick={() => setView("indexSwing")}>指数波段</Button>
           <Button size="sm" variant={view === "strategy" ? "secondary" : "ghost"} onClick={() => setView("strategy")}>策略验证</Button>
           <Button size="sm" variant={view === "value" ? "secondary" : "ghost"} onClick={() => setView("value")}>长期研究</Button>
           <IndexPicker
@@ -92,6 +94,7 @@ export default function StocksPage() {
       </header>
 
       {view === "value" && <ValueResearch />}
+      {view === "indexSwing" && <IndexSwingPanel />}
       <div className={view === "fundamental" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
         <StockFundamentalPanel onAskAgent={() => { setView("market"); setRightTab("agent"); }} />
       </div>

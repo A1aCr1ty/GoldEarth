@@ -250,7 +250,7 @@ pub struct LibraryFile {
 #[serde(rename_all = "camelCase", default)]
 pub struct AppSettings {
     /// 外部 Agent 可执行文件地址：可以填可执行文件本身（如
-    /// C:\...\codex.cmd），也可以填它所在的目录。留空则只按系统 PATH 查找。
+    /// C:\...\codex.cmd），也可以填它所在的目录。留空则自动发现官方 CLI 和系统 PATH。
     pub agent_bin_path: String,
     /// 股票看板顶部展示哪些指数。空表示用默认那六个。
     pub index_codes: Vec<String>,

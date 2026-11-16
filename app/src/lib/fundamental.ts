@@ -152,6 +152,43 @@ export function valuationObservations(quote: Quote | null) {
   return lines;
 }
 
+export function synthesizePriceFundamentals(input: {
+  quote: Quote | null;
+  fundamental: FundamentalAnalysis | null;
+  quant: (QuantAdviceInput & { ma20?: number }) | null;
+  quoteFresh: boolean;
+}) {
+  const { quote, fundamental, quant } = input;
+  const currentPrice = quote && finite(quote.price) && quote.price > 0 ? quote.price : null;
+  const changePct = quote && finite(quote.changePct) ? quote.changePct : null;
+  const pe = quote && finite(quote.pe) && quote.pe > 0 ? quote.pe : null;
+  const pb = quote && finite(quote.pb) && quote.pb > 0 ? quote.pb : null;
+  const earningsYield = pe === null ? null : 100 / pe;
+  const ma20 = quant?.ready && finite(quant.ma20) && quant.ma20 > 0 ? quant.ma20 : null;
+  const priceToMa20 = currentPrice !== null && ma20 !== null ? Math.round((currentPrice / ma20 - 1) * 10000) / 100 : null;
+  const quality = fundamental?.score === null || !fundamental ? "数据不足" : `${fundamental.score} 分 / ${fundamental.rating}`;
+  let conclusion: string;
+  if (currentPrice === null) conclusion = `财报质量${quality}，但没有有效当前股价，暂不形成价格与估值结论。`;
+  else if (!input.quoteFresh) conclusion = `财报质量${quality}，但当前报价过旧或证券不匹配，不能作为实时操作依据。`;
+  else if (!fundamental || fundamental.score === null) conclusion = "有效财报指标不足，当前价格不能替代基本面证据，暂不形成综合操作候选。";
+  else if (finite(fundamental.report.netProfit) && fundamental.report.netProfit <= 0) conclusion = `当前股价 ${currentPrice.toFixed(2)} 元，但报告期归母净利润不为正；不能因股价低或 PE/PB 数字而判断低估，先复核亏损原因与持续经营风险。`;
+  else if (!quant?.ready || priceToMa20 === null) conclusion = `基本面 ${quality}，当前股价 ${currentPrice.toFixed(2)} 元；最近日线不足以验证 MA20 和量价条件，暂不形成完整操作结论。`;
+  else if (priceToMa20 > 5) conclusion = `基本面 ${quality}，但当前股价 ${currentPrice.toFixed(2)} 元已高于 MA20 ${priceToMa20.toFixed(2)}%，超过 5% 的追涨控制线；财报较好不等于当前价格适合追入。`;
+  else if (fundamental.score >= 75 && quant.action === "买入候选") conclusion = `基本面 ${quality}，当前股价相对 MA20 乖离 ${priceToMa20.toFixed(2)}%，量价规则也达到候选条件；可列入研究候选，但仍需结合估值、公告和仓位复核，不代表预期上涨。`;
+  else if (fundamental.score < 55) conclusion = `当前股价 ${currentPrice.toFixed(2)} 元，但基本面仅 ${quality}；价格波动不能替代盈利、现金流和杠杆证据，不生成新买入候选。`;
+  else if (priceToMa20 < 0) conclusion = `基本面 ${quality}，当前股价低于 MA20 ${Math.abs(priceToMa20).toFixed(2)}%；价格仍偏弱，等待企稳和量价确认，不把下跌本身当作低估。`;
+  else conclusion = `基本面 ${quality}，当前股价相对 MA20 乖离 ${priceToMa20.toFixed(2)}%；财报与价格尚未同时达到新买入候选条件，继续观察财报风险和量价确认。`;
+  const valuationNote = `PE(TTM) ${pe?.toFixed(2) ?? "不可用"}，PB ${pb?.toFixed(2) ?? "不可用"}${earningsYield === null ? "" : `；PE 倒数对应的静态盈利收益率 ${earningsYield.toFixed(2)}%，不是预期收益`}。缺少行业和自身历史估值分位，不能仅凭 PE/PB 判断便宜或昂贵。`;
+  return { currentPrice, changePct, pe, pb, earningsYield, ma20, priceToMa20, conclusion, valuationNote };
+}
+
+export function peerMedian(values: (number | null | undefined)[]) {
+  const sorted = values.filter((value): value is number => finite(value)).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
 export function combineOperationAdvice(input: {
   fundamental: FundamentalAnalysis | null;
   quant: QuantAdviceInput | null;
