@@ -58,6 +58,7 @@ export const tauri = {
   stockQuotes(codes: string[]) { return invoke<import("@/types").Quote[]>("stock_quotes", { codes }); },
   stockQuote(code: string) { return invoke<import("@/types").Quote>("stock_quote", { code }); },
   stockKline(code: string, period: import("@/types").KlinePeriod, limit?: number) { return invoke<import("@/types").Candle[]>("stock_kline", { code, period, limit: limit ?? 500 }); },
+  indexRuleBacktest(code: string, bars: import("@/types").Candle[]) { return invoke<import("@/lib/indexRuleLocal").LocalIndexRuleResult>("index_rule_backtest", { code, bars }); },
   stockTrends(code: string) { return invoke<import("@/types").Trend>("stock_trends", { code }); },
   marketRankings(kind: import("@/types").RankKind, limit?: number) { return invoke<import("@/types").RankItem[]>("market_rankings", { kind, limit: limit ?? 20 }); },
   stockFundFlow(code: string) { return invoke<import("@/types").FundFlow>("stock_fund_flow", { code }); },

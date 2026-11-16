@@ -11,6 +11,28 @@ export const INDEX_ETFS = [
   { code: "sh588000", name: "科创50ETF华夏" },
 ] as const;
 
+export interface IndexEtf { code: string; name: string }
+export function normalizeEtfCode(value: string): string {
+  const compact = value.trim().toLowerCase().replace(/\s+/g, "");
+  const digits = compact.replace(/^(sh|sz)/, "");
+  if (!/^\d{6}$/.test(digits)) throw new Error("请输入6位ETF代码，可带 sh / sz 前缀。");
+  if (/^[56]/.test(digits)) return `sh${digits}`;
+  if (/^[0123]/.test(digits)) return `sz${digits}`;
+  throw new Error("无法识别交易所，请使用沪深ETF代码，例如 510300 或 159915。");
+}
+export function mergeIndexEtfs(custom: IndexEtf[]): IndexEtf[] {
+  const merged: IndexEtf[] = INDEX_ETFS.map(etf => ({ ...etf }));
+  for (const item of custom) {
+    try {
+      const code = normalizeEtfCode(item.code);
+      if (!merged.some(etf => etf.code === code)) merged.push({ code, name: item.name.trim() || `指数ETF ${code.slice(2)}` });
+    } catch {
+      continue;
+    }
+  }
+  return merged;
+}
+
 export const BOSS_MO_SOURCES = [
   { title: "墨派MACD法之模式1", url: "https://www.bilibili.com/video/BV13q4y1t71v/", use: "MACD图形与持仓思路参考" },
   { title: "墨派MACD法之模式2", url: "https://www.bilibili.com/video/BV11S4y1r7Yu/", use: "MACD判定与筛选思路参考" },

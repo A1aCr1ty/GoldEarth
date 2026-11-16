@@ -75,6 +75,7 @@ pub fn run() {
             commands::value_research::value_research_run,
             commands::strategy::strategy_review,
             commands::strategy::stock_swing_review,
+            commands::strategy::index_rule_backtest,
             commands::archify::prepare_archify_generation,
             commands::archify::render_archify,
             commands::archify::export_archify,

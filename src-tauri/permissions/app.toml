@@ -116,6 +116,7 @@ commands.allow = [
   "stock_fund_flow",
   "stock_financial_reports",
   "stock_kline",
+  "index_rule_backtest",
   "stock_quote",
   "stock_quotes",
   "stock_trends",

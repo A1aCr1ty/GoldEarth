@@ -72,6 +72,7 @@ fn main() {
             "value_research_run",
             "strategy_review",
             "stock_swing_review",
+            "index_rule_backtest",
             "prepare_archify_generation",
             "render_archify",
             "export_archify",

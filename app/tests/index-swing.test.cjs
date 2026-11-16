@@ -7,7 +7,7 @@ const moduleUnderTest = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/lib/indexSwing.ts'), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText, { module: moduleUnderTest, exports: moduleUnderTest.exports });
-const { evaluateIndexSwing, INDEX_ETFS } = moduleUnderTest.exports;
+const { evaluateIndexSwing, INDEX_ETFS, mergeIndexEtfs, normalizeEtfCode } = moduleUnderTest.exports;
 
 function bars(count, start, step) {
   return Array.from({ length: count }, (_, i) => {
@@ -22,6 +22,28 @@ function quote(price, time = '20261113150000') {
 
 test('six requested ETFs use verified securities codes', () => {
   assert.deepEqual(Array.from(INDEX_ETFS, item => item.code), ['sz159915', 'sh510300', 'sh512890', 'sz159516', 'sh588200', 'sh588000']);
+});
+
+test('custom ETF codes normalize exchange prefixes and reject invalid identifiers', () => {
+  assert.equal(normalizeEtfCode('510300'), 'sh510300');
+  assert.equal(normalizeEtfCode(' SZ159915 '), 'sz159915');
+  assert.equal(normalizeEtfCode('588000'), 'sh588000');
+  assert.throws(() => normalizeEtfCode('51030'), /6位/);
+  assert.throws(() => normalizeEtfCode('999999'), /交易所/);
+});
+
+test('custom watchlist merges without duplicates and ignores malformed saved records', () => {
+  const merged = mergeIndexEtfs([
+    { code: '159941', name: '纳指ETF' },
+    { code: 'sh510300', name: '重复内置' },
+    { code: '513100', name: '' },
+    { code: 'bad', name: '无效记录' },
+  ]);
+  assert.equal(merged.length, 8);
+  assert.equal(merged[6].code, 'sz159941');
+  assert.equal(merged[6].name, '纳指ETF');
+  assert.equal(merged[7].name, '指数ETF 513100');
+  assert.equal(mergeIndexEtfs([{ code: 'bad', name: '无效记录' }]).length, 6);
 });
 
 test('current price and ATR form an ordered technical price ladder', () => {

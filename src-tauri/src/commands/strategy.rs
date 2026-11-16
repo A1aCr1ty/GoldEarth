@@ -1,6 +1,7 @@
 use std::{path::Path, process::Stdio, time::Duration};
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 pub(super) static REVIEW: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -26,6 +27,39 @@ pub async fn stock_swing_review(app: AppHandle, codes: Vec<String>) -> Result<Va
         .map_err(|e|format!("Python启动失败：{e}"))?;
     if !output.status.success() { return Err(String::from_utf8_lossy(&output.stderr).chars().rev().take(1500).collect::<String>().chars().rev().collect()); }
     serde_json::from_slice(&output.stdout).map_err(|e|format!("持仓复盘解析失败：{e}"))
+}
+
+#[tauri::command]
+pub async fn index_rule_backtest(app: AppHandle, code: String, bars: Vec<crate::market::types::Candle>) -> Result<Value, String> {
+    let digits = code.strip_prefix("sh").or_else(|| code.strip_prefix("sz")).unwrap_or("");
+    if digits.len()!=6 || !digits.bytes().all(|b| b.is_ascii_digit()) || !((code.starts_with("sh") && matches!(digits.as_bytes()[0], b'5' | b'6')) || (code.starts_with("sz") && matches!(digits.as_bytes()[0], b'0' | b'1' | b'2' | b'3'))) {
+        return Err("ETF代码或交易所无效".into());
+    }
+    if !(60..=5000).contains(&bars.len()) { return Err("本地回测需要60至5000根日线".into()); }
+    let root=app.path().app_data_dir().map_err(|e| e.to_string())?.join("strategy");
+    prepare_engine(&root)?;
+    let python=std::env::var_os("GOLDEARTH_PYTHON").unwrap_or_else(|| "python".into());
+    let mut cmd=Command::new(python);
+    cmd.arg("index_rule_local.py").current_dir(root).env("PYTHONIOENCODING","utf-8")
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000);
+    let mut child=cmd.spawn().map_err(|e|format!("无法启动 Python：{e}。请安装 Python、numpy、pandas；可通过 GOLDEARTH_PYTHON 指定解释器"))?;
+    let payload=serde_json::to_vec(&json!({"code":code,"bars":bars})).map_err(|e|e.to_string())?;
+    child.stdin.take().ok_or("无法打开回测输入")?.write_all(&payload).await.map_err(|e|format!("写入回测数据失败：{e}"))?;
+    let output=tokio::time::timeout(Duration::from_secs(120),child.wait_with_output()).await
+        .map_err(|_|"指数双策略回测超过2分钟，已停止".to_string())?
+        .map_err(|e|format!("指数回测运行失败：{e}"))?;
+    if !output.status.success() {
+        let stderr=String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.chars().rev().take(2000).collect::<String>().chars().rev().collect());
+    }
+    let value:Value=serde_json::from_slice(&output.stdout).map_err(|e|format!("指数回测结果解析失败：{e}"))?;
+    if value["code"].as_str()!=Some(code.as_str()) || !value["grid"]["latest"].is_object() || !value["oversold"]["latest"].is_object()
+        || !(value["natr"].is_null() || value["natr"]["selected"]["latest"].is_object()) {
+        return Err("指数回测结果不完整".into());
+    }
+    Ok(value)
 }
 
 fn read_snapshot(path: &Path) -> Result<Value, String> {
@@ -119,6 +153,9 @@ pub(super) fn prepare_engine(root: &Path) -> Result<(), String> {
         ("broad_universe.py", include_str!("../../resources/strategy/broad_universe.py")),
         ("fusion_model.py", include_str!("../../resources/strategy/fusion_model.py")),
         ("swing_review.py", include_str!("../../resources/strategy/swing_review.py")),
+        ("index_grid.py", include_str!("../../resources/strategy/index_grid.py")),
+        ("index_rule_strategies.py", include_str!("../../resources/strategy/index_rule_strategies.py")),
+        ("index_rule_local.py", include_str!("../../resources/strategy/index_rule_local.py")),
     ] {
         std::fs::write(root.join(name), source).map_err(|e| e.to_string())?;
     }
